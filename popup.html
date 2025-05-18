@@ -20,7 +20,27 @@
     <div id="result">
       Select a summary type and click 'Summarize This Page' to generate a
       summary.
-      <p class="debug-msg">Debug Tips: 'Retry reloading the chrome tab manually.'</p>
+      <p class="debug-msg">
+        Debug Tips: 'Retry reloading the chrome tab manually.'
+      </p>
+    </div>
+
+    <hr />
+
+    <h3>AI Code Analysis</h3>
+    <textarea
+      id="code-input"
+      placeholder="Paste your code here..."
+      rows="8"
+      style="width: 100%"
+    ></textarea>
+
+    <div class="options">
+      <select id="code-analysis-type">
+        <option value="bigoh">Big-Oh Analysis</option>
+        <option value="detailed">Detailed Analysis</option>
+      </select>
+      <button id="analyze-btn">Analyze Code</button>
     </div>
 
     <script src="popup.js"></script>

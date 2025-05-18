@@ -32,6 +32,7 @@ document.getElementById("summarize").addEventListener("click", () => {
               summaryType.value,
               geminiApiKey
             );
+            resultDiv.style.textAlign = "left";
             resultDiv.textContent = summary;
           } catch (error) {
             resultDiv.textContent = "Gemini error: " + error.message;
@@ -84,5 +85,47 @@ document.getElementById("copy-btn").addEventListener("click", () => {
     const old = btn.textContent;
     btn.textContent = "Copied!";
     setTimeout(() => (btn, (textContent = old)), 2000);
+  });
+});
+
+document.getElementById("analyze-btn").addEventListener("click", () => {
+  const resultDiv = document.getElementById("result");
+  const code = document.getElementById("code-input").value.trim();
+  const analysisType = document.getElementById("code-analysis-type").value;
+
+  if (!code) {
+    resultDiv.textContent = "Please paste some code to analyze.";
+    return;
+  }
+
+  resultDiv.innerHTML = '<div class="loader"></div>';
+
+  chrome.storage.sync.get(["geminiApiKey"], async ({ geminiApiKey }) => {
+    if (!geminiApiKey) {
+      resultDiv.textContent =
+        "No API key is set. Click the gear icon to add one.";
+      return;
+    }
+
+    const promptMap = {
+      bigoh: `Give the Big-Oh notation of time and space complexity of the following code. Only provide Big-O notation for time and space. Do not give additional information\n\n${code}`,
+      detailed: `Do a full analysis of the code below: include time complexity, space complexity, and reasoning in 5-12 sentences.\n\n${code}`,
+    };
+
+    const prompt = promptMap[analysisType] || promptMap["bigoh"];
+
+    try {
+      const summary = await getSummaryFromGemini(
+        prompt,
+        "detailed",
+        geminiApiKey
+      );
+      resultDiv.style.textAlign =
+        analysisType === "bigoh" ? "center" : "inherit";
+      resultDiv.style.fontSize = analysisType === "bigoh" ? "24px" : "inherit";
+      resultDiv.textContent = summary;
+    } catch (err) {
+      resultDiv.textContent = "Gemini error: " + err.message;
+    }
   });
 });
