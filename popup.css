@@ -74,7 +74,7 @@ button:hover {
   margin-bottom: 10px;
 }
 
-#result p {
+#result {
   text-align: center;
 }
 
@@ -92,6 +92,14 @@ button:hover {
   width: 30px;
   height: 30px;
   animation: spin 1s linear infinite;
+}
+
+#code-input {
+  margin-bottom: 10px;
+}
+
+#analyze-btn {
+  padding: 8px;
 }
 
 @keyframes spin {
