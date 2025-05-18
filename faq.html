@@ -1,9 +1,79 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FAQ PAGE to be added</title>
+    <title>FAQ - AI Summary Articles</title>
+    <link rel="stylesheet" href="faq.css" />
   </head>
-  <body></body>
+  <body>
+    <div class="content-wrapper">
+      <div class="faq-container">
+        <h1>
+          <img
+            src="icon.png"
+            alt="AI Summary Logo"
+            style="height: 32px; vertical-align: middle; margin-right: 10px"
+          />
+          AI Summary and Code Analysis
+        </h1>
+        <h3 style="text-align: center; color: rgb(233, 165, 63)">
+          Frequently Asked Questions
+        </h3>
+
+        <details>
+          <summary>How do I get a Gemini API key?</summary>
+          <p>
+            Visit
+            <a href="https://makersuite.google.com/app/apikey" target="_blank"
+              >Google AI Studio</a
+            >
+            and follow the steps to generate your free API key.
+          </p>
+        </details>
+
+        <details>
+          <summary>Why does the extension ask to reload the page?</summary>
+          <p>
+            The extension needs to hook into the article’s DOM. Reloading
+            ensures proper initialization.
+          </p>
+        </details>
+
+        <details>
+          <summary>Is my data stored or tracked?</summary>
+          <p>
+            No. The extension stores your Gemini API key only on your local
+            Chrome storage. We do not store, share, or transmit any user data.
+          </p>
+        </details>
+
+        <details>
+          <summary>How do I analyze code with this extension?</summary>
+          <p>
+            Paste your code in the textarea at the bottom of the popup. Choose
+            “Big-Oh” or “Detailed” and click “Analyze Code.”
+          </p>
+        </details>
+      </div>
+    </div>
+
+    <footer>
+      <img src="icon.png" alt="Logo" />
+      © 2025
+      <a
+        href="https://www.linkedin.com/in/sarath-kumar-dunga-0684a4360/"
+        target="_blank"
+        style="
+          color: #76808f;
+          text-decoration: none;
+          font-weight: 500;
+          display: inline-flex;
+          align-items: center;
+        "
+        onmouseover="this.style.textDecoration='underline'; this.style.color='#3399ff'"
+        onmouseout="this.style.textDecoration='none'; this.style.color='#76808f'"
+      >
+        Sarath Kumar Dunga [<span style="color: #3399ff">LinkedIn</span>]
+      </a>
+    </footer>
+  </body>
 </html>

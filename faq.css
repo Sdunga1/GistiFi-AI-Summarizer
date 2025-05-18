@@ -1,0 +1,75 @@
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #ffffff;
+}
+
+.content-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+.faq-container {
+  background: linear-gradient(to bottom right, #000000, #8b0000);
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 700px;
+  color: #f1f1f1;
+}
+
+h1 {
+  color: #5e93e7;
+  text-align: center;
+}
+
+details {
+  background-color: #1a1a1a;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border: 1px solid #333;
+}
+
+summary {
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #ffffff;
+}
+
+summary:hover {
+  text-decoration: underline;
+}
+
+p,
+a {
+  color: #e0e0e0;
+}
+
+a:hover {
+  color: #ffb3b3;
+  text-decoration: underline;
+}
+
+footer {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #888;
+  padding: 1rem;
+  border-top: 1px solid #ddd;
+}
+
+footer img {
+  height: 20px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
