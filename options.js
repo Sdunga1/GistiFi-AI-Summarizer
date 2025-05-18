@@ -8,8 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!apiKey) return;
 
     chrome.storage.sync.set({ geminiApiKey: apiKey }, () => {
-      document.getElementById("success-message").style.display = "block";
-      setTimeout(() => window.close(), 1000);
+      chrome.action.setPopup({ popup: "reloadPrompt.html" }, () => {
+        document.getElementById("success-message").style.display = "block";
+        setTimeout(() => window.close(), 1000);
+      });
     });
   });
 });
