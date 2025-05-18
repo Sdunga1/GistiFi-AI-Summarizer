@@ -1,19 +1,17 @@
-# 🧑🏻‍💻 AI Summary Articles, Code Analysis — Chrome Extension
+# 🧑🏻‍💻 AI Summary Articles, Code Analysis — Chrome Extension ![MIT License](https://img.shields.io/badge/license-MIT-green)
 
-![MIT License](https://img.shields.io/badge/license-MIT-green)
 **Summarize any webpage. Analyze your code. All in one click.**
 
 This Chrome extension helps you:
 
-- 📃 Summarize articles in brief, detailed, or bullet-point formats using Google Gemini.
-- 💡 Analyze pasted code for Big-O time and space complexity.
-- 🧪 Get debug tips when things don't go as planned.
+- Summarize articles in brief, detailed, or bullet-point formats using Google Gemini.
+- Analyze pasted code for Big-O time and space complexity.
 
 No login. Just your own Gemini API key.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started - Instructions
 
 1. **Install the Extension**
 
@@ -42,7 +40,7 @@ No login. Just your own Gemini API key.
 
 ## 📚 Documentation
 
-📄 [Google Doc - How to Get Gemini API Key + Billing Info](https://docs.google.com/document/d/1rDcfkPIugkY8ZCy-x9b7r6iygx5ot7Wcyjj7Bp24tcY/edit?tab=t.0)
+[Google Doc - How to Get Gemini API Key + Billing Info](https://docs.google.com/document/d/1rDcfkPIugkY8ZCy-x9b7r6iygx5ot7Wcyjj7Bp24tcY/edit?tab=t.0)
 
 - Step-by-step setup instructions
 - Google Gemini rate limits
@@ -73,9 +71,9 @@ Want to share your experience? Stay Tuned...
 
 ## 💡 Future Enhancements
 
-- 🔍 Search history of summarized articles
-- 📤 Export summaries to PDF or Notion
-- 📊 Visual code complexity graphs
+- Search history of summarized articles
+- Export summaries to PDF or Notion
+- Visual code complexity graphs (Might lead to a delayed response)
 
 ---
 
