@@ -74,6 +74,10 @@ button:hover {
   margin-bottom: 10px;
 }
 
+#result p {
+  text-align: center;
+}
+
 .loading {
   display: flex;
   justify-content: center;
