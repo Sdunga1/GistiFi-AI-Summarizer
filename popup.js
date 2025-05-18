@@ -43,7 +43,7 @@ document.getElementById("summarize").addEventListener("click", () => {
 });
 
 async function getSummaryFromGemini(rawText, type, apiKey) {
-  const max = 10000;
+  const max = 30000;
   const text = rawText.length > max ? rawText.slice(0, max) + "..." : rawText;
 
   const promptMap = {
@@ -74,3 +74,15 @@ async function getSummaryFromGemini(rawText, type, apiKey) {
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "No Summary.";
 }
+
+document.getElementById("copy-btn").addEventListener("click", () => {
+  const summarizedText = document.getElementById("result").innerText;
+  if (!summarizedText) return;
+
+  navigator.clipboard.writeText(summarizedText).then(() => {
+    const btn = document.getElementById("copy-btn");
+    const old = btn.textContent;
+    btn.textContent = "Copied!";
+    setTimeout(() => (btn, (textContent = old)), 2000);
+  });
+});
