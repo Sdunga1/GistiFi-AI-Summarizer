@@ -1,4 +1,4 @@
-# 🧑🏻‍💻 AI Summary Articles, Code Analysis — Chrome Extension ![MIT License](https://img.shields.io/badge/license-MIT-green)
+# AI Summary Articles, Code Analysis — Chrome Extension ![MIT License](https://img.shields.io/badge/license-MIT-green)
 
 **Summarize any webpage. Analyze your code. All in one click.**
 
