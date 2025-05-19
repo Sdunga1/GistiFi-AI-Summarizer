@@ -10,9 +10,15 @@ document.getElementById("summarize").addEventListener("click", () => {
   // 3. Send the text to the Gemini for processing
 
   chrome.storage.sync.get(["geminiApiKey"], ({ geminiApiKey }) => {
+    const keyIcon = document.getElementById("key-icon");
     if (!geminiApiKey) {
-      resultDiv.textContent =
-        "No API key is set. Click the gear icon to add one.";
+      keyIcon.style.display = "inline-block";
+    } else {
+      keyIcon.style.display = "none";
+    }
+    if (!geminiApiKey) {
+      resultDiv.innerHTML =
+        "No API key is set. <b>Click the <span style='color:#F5E385;'>key icon</span></b> to add one.";
       return;
     }
 
@@ -103,7 +109,7 @@ document.getElementById("analyze-btn").addEventListener("click", () => {
   chrome.storage.sync.get(["geminiApiKey"], async ({ geminiApiKey }) => {
     if (!geminiApiKey) {
       resultDiv.textContent =
-        "No API key is set. Click the gear icon to add one.";
+        "No API key is set. Click the Key icon to add one.";
       return;
     }
 
@@ -128,4 +134,8 @@ document.getElementById("analyze-btn").addEventListener("click", () => {
       resultDiv.textContent = "Gemini error: " + err.message;
     }
   });
+});
+
+document.getElementById("key-icon").addEventListener("click", () => {
+  chrome.runtime.openOptionsPage();
 });
