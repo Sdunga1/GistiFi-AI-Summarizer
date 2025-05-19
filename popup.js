@@ -79,7 +79,10 @@ async function getSummaryFromGemini(rawText, type, apiKey) {
   }
 
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "No Summary.";
+  return (
+    data.candidates?.[0]?.content?.parts?.[0]?.text ??
+    "No Output.. :( Please make sure you provided correct Gemini API Key"
+  );
 }
 
 document.getElementById("copy-btn").addEventListener("click", () => {
