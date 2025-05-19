@@ -1,33 +1,50 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8" />
     <title>AI Summary Settings</title>
     <link rel="stylesheet" href="options.css" />
+    <link rel="stylesheet" href="footer.css" />
   </head>
   <body>
-    <div class="settings-container">
-      <h1>AI Summary Settings</h1>
+    <div class="content-wrapper">
+      <div class="settings-container">
+        <h1>AI Summary Settings</h1>
 
-      <div class="form-group">
-        <label for="api-key">Gemini API Key:</label>
-        <input
-          type="text"
-          id="api-key"
-          placeholder="Enter your Gemini API key"
-        />
-        <p>
-          You can get an API key from
-          <a href="https://makersuite.google.com/app/apikey" target="_blank"
-            >Google AI Studio</a
-          >
+        <div class="form-group">
+          <label for="api-key">Gemini API Key:</label>
+          <input
+            type="text"
+            id="api-key"
+            placeholder="Enter your Gemini API key"
+          />
+          <p>
+            You can get an API key from
+            <a href="https://makersuite.google.com/app/apikey" target="_blank">
+              Google AI Studio
+            </a>
+          </p>
+        </div>
+
+        <button id="save-button">Save Settings</button>
+        <p id="success-message" class="success-message">
+          Settings saved successfully!
         </p>
+        <p id="error-message" class="error-message">API key cannot be empty!</p>
       </div>
-
-      <button id="save-button">Save Settings</button>
-      <p id="success-message" class="success-message">
-        Settings saved successfully!
-      </p>
     </div>
+
+    <footer class="my-footer">
+      <img src="icon.png" alt="Logo" />
+      &copy; 2025
+      <a
+        href="https://www.linkedin.com/in/sarath-kumar-dunga-0684a4360/"
+        target="_blank"
+        class="linkedin-link"
+      >
+        Sarath Kumar Dunga [<span>LinkedIn</span>]
+      </a>
+    </footer>
 
     <script src="options.js"></script>
   </body>
