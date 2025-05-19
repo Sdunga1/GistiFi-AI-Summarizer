@@ -5,7 +5,24 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <h2>AI Summary</h2>
+    <div
+      style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 15px;
+      "
+    >
+      <h2 style="margin: 0">AI Summary</h2>
+      <img
+        src="keyIcon.png"
+        id="key-icon"
+        alt="Add Key"
+        title="Open Key Settings"
+        style="width: 20px; height: 20px; cursor: pointer; display: none"
+      />
+    </div>
 
     <div class="options">
       <select id="summary-type">

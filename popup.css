@@ -102,6 +102,10 @@ button:hover {
   padding: 8px;
 }
 
+img#key-icon {
+  vertical-align: middle;
+}
+
 @keyframes spin {
   0% {
     transform: rotate(0deg);
