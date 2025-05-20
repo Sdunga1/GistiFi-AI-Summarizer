@@ -1,3 +1,8 @@
+function showKeyIcon() {
+  const keyIcon = document.getElementById("key-icon");
+  keyIcon.style.display = "inline-block";
+}
+
 document.getElementById("summarize").addEventListener("click", () => {
   const resultDiv = document.getElementById("result");
   const summaryType = document.getElementById("summary-type");
@@ -42,6 +47,7 @@ document.getElementById("summarize").addEventListener("click", () => {
             resultDiv.textContent = summary;
           } catch (error) {
             resultDiv.textContent = "Gemini error: " + error.message;
+            showKeyIcon();
           }
         }
       );
@@ -79,10 +85,15 @@ async function getSummaryFromGemini(rawText, type, apiKey) {
   }
 
   const data = await res.json();
-  return (
+  const result =
     data.candidates?.[0]?.content?.parts?.[0]?.text ??
-    "No Output.. :( Please make sure you provided correct Gemini API Key"
-  );
+    "No Response... :( Please make sure you provided correct Gemini API Key. Click 'KEY symbol' to add the correct key";
+
+  if (result.startsWith("No Response")) {
+    showKeyIcon();
+  }
+
+  return result;
 }
 
 document.getElementById("copy-btn").addEventListener("click", () => {
@@ -135,6 +146,7 @@ document.getElementById("analyze-btn").addEventListener("click", () => {
       resultDiv.textContent = summary;
     } catch (err) {
       resultDiv.textContent = "Gemini error: " + err.message;
+      showKeyIcon();
     }
   });
 });

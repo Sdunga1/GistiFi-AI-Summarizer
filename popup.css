@@ -57,13 +57,21 @@ button:hover {
   padding: 15px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  min-height: 150px;
-  max-height: 400px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  line-height: 1.5;
+  min-height: 180px;
+  max-height: 450px;
   background-color: rgba(255, 255, 255, 0.05);
   color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  text-align: center;
+}
+
+#result-content {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 5px;
 }
 
 #result ul {
@@ -114,4 +122,12 @@ img#key-icon {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.result-disclaimer {
+  font-size: 0.75rem;
+  color: #817f7c;
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 6px;
 }
