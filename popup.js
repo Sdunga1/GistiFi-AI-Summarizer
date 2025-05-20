@@ -44,7 +44,7 @@ document.getElementById("summarize").addEventListener("click", () => {
               geminiApiKey
             );
             resultDiv.style.textAlign = "left";
-            resultDiv.textContent = summary;
+            resultDiv.innerHTML = `<pre style="white-space: pre-wrap; text-align: left;">${summary}</pre>`;
           } catch (error) {
             resultDiv.textContent = "Gemini error: " + error.message;
             showKeyIcon();
@@ -60,8 +60,8 @@ async function getSummaryFromGemini(rawText, type, apiKey) {
   const text = rawText.length > max ? rawText.slice(0, max) + "..." : rawText;
 
   const promptMap = {
-    brief: `Summarize in 2-3 sentences: \n\n${text}`,
-    detailed: `Give a detailed summary:\n\n${text}`,
+    brief: `Summarize in 2-4 sentences: \n\n${text}`,
+    detailed: `Give a detailed summary in paragraphs of 4-5 sentences each in a clean manner:\n\n${text}`,
     bullets: `Summarize in 5-7 bullet points (Start each line with listed bullet style symbol):\n\n${text}`,
   };
 
@@ -87,7 +87,7 @@ async function getSummaryFromGemini(rawText, type, apiKey) {
   const data = await res.json();
   const result =
     data.candidates?.[0]?.content?.parts?.[0]?.text ??
-    "No Response... :( Please make sure you provided correct Gemini API Key. Click 'KEY symbol' to add the correct key";
+    "No Response... :( Please make sure you provided correct Gemini API Key. Click '🔑 symbol' to add the correct key";
 
   if (result.startsWith("No Response")) {
     showKeyIcon();
@@ -128,8 +128,17 @@ document.getElementById("analyze-btn").addEventListener("click", () => {
     }
 
     const promptMap = {
-      bigoh: `Give the Big-Oh notation of time and space complexity of the following code. Only provide Big-O notation for time and space. Do not give additional information\n\n${code}`,
-      detailed: `Do a full analysis of the code below: include time complexity, space complexity, and reasoning in 5-12 sentences.\n\n${code}`,
+      bigoh: `Strictly return only the time and space complexity in this format exactly:
+
+      Time Complexity - O(...)
+      Space Complexity - O(...)
+      
+      Do not add any explanations, descriptions, analysis, or extra sentences. Only return these two lines. Here is the code:\n\n${code}`,
+      detailed: `Analyze the following code in exactly two paragraphs.
+      First paragraph: Explain only the Time Complexity with reasoning. Do not include correctness or implementation critique.
+      Second paragraph: Explain only the Space Complexity with reasoning. Do not include any mention of time complexity, correctness, or implementation notes.
+      Only focus on the complexities. Do not include anything unrelated. Keep each paragraph 4-6 sentences long, and add a blank line between them.
+      Here is the code:\n\n${code}`,
     };
 
     const prompt = promptMap[analysisType] || promptMap["bigoh"];
@@ -140,10 +149,26 @@ document.getElementById("analyze-btn").addEventListener("click", () => {
         "detailed",
         geminiApiKey
       );
-      resultDiv.style.textAlign =
-        analysisType === "bigoh" ? "center" : "inherit";
-      resultDiv.style.fontSize = analysisType === "bigoh" ? "24px" : "inherit";
-      resultDiv.textContent = summary;
+
+      if (analysisType === "bigoh") {
+        resultDiv.innerHTML = `<pre style="white-space: pre-wrap; font-size: 24px; text-align: center;">${summary}</pre>`;
+      } else {
+        const paragraphs = summary
+          .split("\n\n")
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0);
+
+        if (paragraphs.length >= 2) {
+          resultDiv.innerHTML = `
+            <h4>Time Complexity</h4>
+            <p>${paragraphs[0]}</p>
+            <h4>Space Complexity</h4>
+            <p>${paragraphs[1]}</p>
+          `;
+        } else {
+          resultDiv.innerHTML = paragraphs.map((p) => `<p>${p}</p>`).join("");
+        }
+      }
     } catch (err) {
       resultDiv.textContent = "Gemini error: " + err.message;
       showKeyIcon();
