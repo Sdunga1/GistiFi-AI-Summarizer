@@ -52,6 +52,8 @@ No login. Just your own Gemini API key.
 
 Visit our [FAQ Page](./faq.html) with expandable dropdowns for quick answers.
 
+Read our [Privacy Policy](https://docs.google.com/document/d/17a9Zp0bbkg_2T57FeZlP1h6QiXehRoFh5cPQuDg4gbw/edit?usp=sharing) here.
+
 ---
 
 ## 📝 License
