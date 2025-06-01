@@ -52,7 +52,7 @@ No login. Just your own Gemini API key.
 
 ## ❓ FAQ
 
-Visit our [FAQ Page]([./faq.html](https://gistifi-home.vercel.app/faq.html)) with expandable dropdowns for quick answers.
+Visit our [FAQ Page](https://gistifi-home.vercel.app/faq.html)) with expandable dropdowns for quick answers.
 
 Read our [Privacy Policy](https://docs.google.com/document/d/17a9Zp0bbkg_2T57FeZlP1h6QiXehRoFh5cPQuDg4gbw/edit?usp=sharing) here.
 
@@ -61,7 +61,7 @@ Read our [Privacy Policy](https://docs.google.com/document/d/17a9Zp0bbkg_2T57FeZ
 ## 📝 License
 
 MIT License © 2025 Sarath Kumar Dunga
-[View License](./LICENSE) | [FAQ](./faq.html)
+[View License](./LICENSE) | [FAQ](https://gistifi-home.vercel.app/faq.html)
 
 ---
 
