@@ -3,6 +3,19 @@ function showKeyIcon() {
   keyIcon.style.display = "inline-block";
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+    chrome.storage.local.get(["summary_" + tab.id], (result) => {
+      const summary = result["summary_" + tab.id];
+      if (summary) {
+        const resultDiv = document.getElementById("result");
+        resultDiv.style.textAlign = "left";
+        resultDiv.innerHTML = `<pre style="white-space: pre-wrap; text-align: left;">${summary}</pre>`;
+      }
+    });
+  });
+});
+
 document.getElementById("summarize").addEventListener("click", () => {
   const resultDiv = document.getElementById("result");
   const summaryType = document.getElementById("summary-type");
@@ -45,6 +58,14 @@ document.getElementById("summarize").addEventListener("click", () => {
             );
             resultDiv.style.textAlign = "left";
             resultDiv.innerHTML = `<pre style="white-space: pre-wrap; text-align: left;">${summary}</pre>`;
+
+            // Saving it to chrome.storage.local
+            chrome.tabs.query(
+              { active: true, currentWindow: true },
+              ([tab]) => {
+                chrome.storage.local.set({ ["summary_" + tab.id]: summary });
+              }
+            );
           } catch (error) {
             resultDiv.textContent = "Gemini error: " + error.message;
             showKeyIcon();

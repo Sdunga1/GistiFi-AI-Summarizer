@@ -14,7 +14,7 @@ document.getElementById("proceed-btn").addEventListener("click", () => {
     handledTabs[tabId] = true;
     await chrome.storage.local.set({ handledTabs });
 
-    chrome.action.setPopup({ tabId, popup: "popup.html" }, () => {
+    chrome.action.setPopup({ tabId, popup: "../html/popup.html" }, () => {
       chrome.tabs.reload(tabId, () => {
         setTimeout(() => {
           window.close();

@@ -5,7 +5,8 @@ body {
   display: flex;
   flex-direction: column;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #ffffff;
+  background-color: #fbfbf6;
+  background: linear-gradient(to right, #d7deed, #fbfceb);
 }
 
 .content-wrapper {
@@ -58,6 +59,46 @@ a {
 a:hover {
   color: #ffb3b3;
   text-decoration: underline;
+}
+
+.custom-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  margin: 1.5rem;
+  overflow: hidden;
+  text-decoration: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  border-radius: 0.5rem;
+  background: linear-gradient(to right, #999, #ccc); /* fallback */
+  transition: all 0.3s ease-in-out;
+}
+
+.custom-btn span {
+  padding: 0.75rem 1.5rem;
+  background-color: #fff;
+  border-radius: 0.4rem;
+  transition: background 0.5s ease-in-out;
+}
+
+.custom-btn:hover span {
+  background: transparent;
+  color: white;
+}
+
+/* Unique Gradients */
+.purple-blue {
+  background: linear-gradient(to right, #7e22ce, #2563eb);
+}
+.green-teal {
+  background: linear-gradient(to right, #10b981, #06b6d4);
+}
+.orange-red {
+  background: linear-gradient(to right, #f97316, #ef4444);
 }
 
 footer {

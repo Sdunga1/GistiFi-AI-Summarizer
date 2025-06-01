@@ -1,7 +1,7 @@
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.sync.get(["geminiApiKey"], (result) => {
     if (!result.geminiApiKey) {
-      chrome.tabs.create({ url: "options.html" });
+      chrome.tabs.create({ url: "./html/options.html" });
     }
   });
 });
@@ -12,9 +12,9 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   const handledTabs = stored.handledTabs || {};
 
   if (handledTabs[tabId]) {
-    chrome.action.setPopup({ tabId, popup: "popup.html" });
+    chrome.action.setPopup({ tabId, popup: "./html/popup.html" });
   } else {
-    chrome.action.setPopup({ tabId, popup: "reloadPrompt.html" });
+    chrome.action.setPopup({ tabId, popup: "./html/reloadPrompt.html" });
   }
 });
 
@@ -24,9 +24,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     const handledTabs = stored.handledTabs || {};
 
     if (handledTabs[tabId]) {
-      chrome.action.setPopup({ tabId, popup: "popup.html" });
+      chrome.action.setPopup({ tabId, popup: "./html/popup.html" });
     } else {
-      chrome.action.setPopup({ tabId, popup: "reloadPrompt.html" });
+      chrome.action.setPopup({ tabId, popup: "./html/reloadPrompt.html" });
     }
   }
 });
@@ -36,5 +36,6 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     const handledTabs = stored.handledTabs || {};
     delete handledTabs[tabId];
     chrome.storage.local.set({ handledTabs });
+    chrome.storage.local.remove("summary_" + tabId);
   });
 });

@@ -3,11 +3,11 @@
   "name": "GistiFi AI Summarizer",
   "version": "1.0",
 
-  "permissions": ["scripting", "activeTab", "storage"],
+  "permissions": ["activeTab", "storage"],
 
   "action": {
-    "default_popup": "reloadPrompt.html",
-    "default_icon": "icon.png",
+    "default_popup": "./html/reloadPrompt.html",
+    "default_icon": "./assets/icon.png",
     "icons": {
       "16": "./icons/icon16.png",
       "32": "./icons/icon32.png",
@@ -19,7 +19,7 @@
   "content_scripts": [
     {
       "matches": ["https://*/*", "http://*/*"],
-      "js": ["content.js"]
+      "js": ["./scripts/content.js"]
     }
   ],
 
@@ -27,7 +27,7 @@
     "service_worker": "background.js"
   },
 
-  "options_page": "options.html",
+  "options_page": "./html/options.html",
 
   "host_permissions": ["https://*/*", "http://*/*"]
 }

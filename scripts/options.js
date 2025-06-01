@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     chrome.storage.sync.set({ geminiApiKey: apiKey }, () => {
-      chrome.action.setPopup({ popup: "reloadPrompt.html" }, () => {
+      chrome.action.setPopup({ popup: "../html/reloadPrompt.html" }, () => {
         successMsg.style.display = "block";
         errorMsg.style.display = "none";
         setTimeout(() => window.close(), 1000);
