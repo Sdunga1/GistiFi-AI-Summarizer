@@ -2,6 +2,8 @@
 
 **Summarize any webpage. Analyze your code. All in one click.**
 
+# Download it from Chrome Extension Store: [Gistifi AI Summary Extension Link ->](https://chromewebstore.google.com/detail/oejfheefemcebogcabeedgikkhdgpdhg?utm_source=item-share-cb).
+
 This Chrome extension helps you:
 
 - Summarize articles in brief, detailed, or bullet-point formats using Google Gemini.
@@ -50,7 +52,7 @@ No login. Just your own Gemini API key.
 
 ## ❓ FAQ
 
-Visit our [FAQ Page](./faq.html) with expandable dropdowns for quick answers.
+Visit our [FAQ Page]([./faq.html](https://gistifi-home.vercel.app/faq.html)) with expandable dropdowns for quick answers.
 
 Read our [Privacy Policy](https://docs.google.com/document/d/17a9Zp0bbkg_2T57FeZlP1h6QiXehRoFh5cPQuDg4gbw/edit?usp=sharing) here.
 
