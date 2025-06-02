@@ -15,6 +15,8 @@ No login. Just your own Gemini API key.
 
 ## Getting Started - Instructions
 
+# Setup Docs: [Click here to view setup docs](https://docs.google.com/document/d/1IrP6pYTZG0y58o51MMGygRMOtj4TVsyyz4CW-2HM5sc/edit?tab=t.0).
+
 1. **Install the Extension**
 
    - Visit the [Chrome Web Store](#) (Coming Soon).
@@ -52,7 +54,7 @@ No login. Just your own Gemini API key.
 
 ## ❓ FAQ
 
-Visit our [FAQ Page](https://gistifi-home.vercel.app/faq.html)) with expandable dropdowns for quick answers.
+Visit our [FAQ Page](https://gistifi-home.vercel.app/faq.html) with expandable dropdowns for quick answers.
 
 Read our [Privacy Policy](https://docs.google.com/document/d/17a9Zp0bbkg_2T57FeZlP1h6QiXehRoFh5cPQuDg4gbw/edit?usp=sharing) here.
 
