@@ -2,7 +2,9 @@
 
 **Summarize any webpage. Analyze your code. All in one click.**
 
-# Download it from Chrome Extension Store: [Gistifi AI Summary Extension Link ->](https://chromewebstore.google.com/detail/oejfheefemcebogcabeedgikkhdgpdhg?utm_source=item-share-cb).
+![GistiFiLogo](https://github.com/user-attachments/assets/adc85cf1-eeca-4bf8-afd0-a1b8e05b88d3)
+
+# Download it from Chrome Extension Store: [Gistifi AI Summary Extension Link](https://chromewebstore.google.com/detail/oejfheefemcebogcabeedgikkhdgpdhg?utm_source=item-share-cb).
 
 This Chrome extension helps you:
 
