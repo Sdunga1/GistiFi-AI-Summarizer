@@ -115,7 +115,7 @@ Feel free to:
 
 • Open a GitHub issue
 • Email: sdunga1@asu.edu
-• Reach out on LinkedIn
+• Reach out on [Linkedin](https://www.linkedin.com/in/sarath-kumar-dunga-0684a4360/)
 
 ## Code of Conduct
 
@@ -125,7 +125,7 @@ Please be respectful in all interactions. Treat others as you would in a profess
 
 Every contribution makes a difference — from fixing typos to adding entire features. Thanks again for helping make GistiFi better.
 
-**Maintained by:** Sarath Kumar Dunga | [Linkedin] (https://www.linkedin.com/in/sarath-kumar-dunga-0684a4360/) | [Portfolio] (https://portfolio-sarathkumardunga.vercel.app/)
+**Maintained by:** Sarath Kumar Dunga | [Linkedin](https://www.linkedin.com/in/sarath-kumar-dunga-0684a4360/) | [Portfolio](https://portfolio-sarathkumardunga.vercel.app/)
 
 **Links:**
 • [GistiFi Chrome Extension (official)](https://chromewebstore.google.com/detail/oejfheefemcebogcabeedgikkhdgpdhg?utm_source=item-share-cb)
