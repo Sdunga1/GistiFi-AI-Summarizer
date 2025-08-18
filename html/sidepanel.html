@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GistiFi AI Chat</title>
+    <link rel="stylesheet" href="../styles/sidepanel.css" />
+    <link rel="stylesheet" href="../styles/footer.css" />
+  </head>
+  <body>
+    <!-- Header Section -->
+    <header class="chat-header">
+      <div class="header-content">
+        <img src="../assets/icon.png" alt="GistiFi Logo" class="header-logo" />
+        <div class="header-text">
+          <h1>GistiFi AI</h1>
+          <span class="status-indicator">● Online</span>
+        </div>
+        <div class="header-actions">
+          <button id="settings-btn" class="icon-btn" title="Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"
+              />
+            </svg>
+          </button>
+          <button id="clear-chat-btn" class="icon-btn" title="Clear Chat">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Chat Messages Container -->
+    <main class="chat-container">
+      <div id="chat-messages" class="chat-messages">
+        <!-- Welcome Message -->
+        <div class="message bot-message">
+          <div class="message-avatar">
+            <img src="../assets/icon.png" alt="GistiFi" />
+          </div>
+          <div class="message-content">
+            <div class="message-bubble">
+              <p>👋 Welcome to GistiFi AI! I can help you:</p>
+              <ul>
+                <li>📄 Summarize articles and webpages</li>
+                <li>🧠 Analyze code complexity</li>
+                <li>💡 Answer questions about the current page</li>
+              </ul>
+              <p>What would you like me to help you with today?</p>
+            </div>
+            <div class="message-time">Just now</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button
+          class="quick-action-btn leetcode-mode-btn"
+          data-action="leetcode-mode"
+          id="leetcode-mode-btn"
+          style="display: none"
+        >
+          <img
+            src="https://img.icons8.com/?size=100&id=9L16NypUzu38&format=png&color=000000"
+            alt="LeetCode"
+            class="leetcode-icon"
+            width="16"
+            height="16"
+          />
+          LeetCode Mode
+        </button>
+        <button class="quick-action-btn" data-action="summarize">
+          📄 Summarize Page
+        </button>
+        <button class="quick-action-btn" data-action="analyze-code">
+          🧠 Analyze Code
+        </button>
+        <button class="quick-action-btn" data-action="ask-question">
+          💬 Ask Question
+        </button>
+      </div>
+    </main>
+
+    <!-- Chat Input Section -->
+    <footer class="chat-input-section">
+      <div class="input-container">
+        <div class="input-wrapper">
+          <textarea
+            id="chat-input"
+            placeholder="Type your message or paste code here..."
+            rows="1"
+            maxlength="5000"
+          ></textarea>
+          <div class="input-actions">
+            <button id="attach-btn" class="icon-btn" title="Options">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
+                />
+              </svg>
+            </button>
+            <button id="send-btn" class="send-btn" title="Send">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span class="api-status" id="api-status">
+          <span class="status-dot"></span>
+          <span id="api-status-text">Ready</span>
+        </span>
+        <span class="char-count"> <span id="char-count">0</span>/5000 </span>
+      </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+      <div class="loading-spinner"></div>
+      <p>Processing your request...</p>
+    </div>
+
+    <!-- Options Modal -->
+    <div id="options-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Summary Options</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="option-group">
+            <label>Summary Type:</label>
+            <select id="summary-type">
+              <option value="brief">Brief Summary</option>
+              <option value="detailed">Detailed Summary</option>
+              <option value="bullets">Bullet Points</option>
+              <option value="custom">Custom Length</option>
+            </select>
+          </div>
+          <div
+            class="option-group"
+            id="custom-length-group"
+            style="display: none"
+          >
+            <label>Word Count:</label>
+            <input
+              type="number"
+              id="custom-word-count"
+              min="50"
+              max="1000"
+              value="200"
+            />
+          </div>
+          <div class="option-group">
+            <label>Analysis Type:</label>
+            <select id="analysis-type">
+              <option value="bigoh">Big-O Analysis</option>
+              <option value="detailed">Detailed Analysis</option>
+              <option value="suggestions">Performance Suggestions</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="apply-options" class="btn-primary">Apply</button>
+          <button class="close-modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../scripts/sidepanel.js"></script>
+  </body>
+</html>

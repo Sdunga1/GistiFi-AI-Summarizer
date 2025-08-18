@@ -1,25 +1,37 @@
 {
   "manifest_version": 3,
   "name": "GistiFi AI Summarizer",
-  "version": "1.0",
+  "version": "2.0",
 
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "storage", "sidePanel", "scripting"],
 
   "action": {
-    "default_popup": "./html/reloadPrompt.html",
-    "default_icon": "./assets/icon.png",
-    "icons": {
-      "16": "./icons/icon16.png",
-      "32": "./icons/icon32.png",
-      "48": "./icons/icon48.png",
-      "128": "./icons/icon128.png"
-    }
+    "default_title": "Open GistiFi Chat Panel"
+  },
+
+  "side_panel": {
+    "default_path": "./html/sidepanel.html"
+  },
+
+  "icons": {
+    "16": "./icons/icon16.png",
+    "32": "./icons/icon32.png",
+    "48": "./icons/icon48.png",
+    "128": "./icons/icon128.png"
   },
 
   "content_scripts": [
     {
       "matches": ["https://*/*", "http://*/*"],
-      "js": ["./scripts/content.js"]
+      "js": ["./scripts/content.js"],
+      "css": ["./styles/floating-button.css"]
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["https://*/*", "http://*/*"]
     }
   ],
 

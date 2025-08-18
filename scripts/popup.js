@@ -125,7 +125,7 @@ document.getElementById("copy-btn").addEventListener("click", () => {
     const btn = document.getElementById("copy-btn");
     const old = btn.textContent;
     btn.textContent = "Copied!";
-    setTimeout(() => (btn, (textContent = old)), 2000);
+    setTimeout(() => (btn.textContent = old), 2000);
   });
 });
 
