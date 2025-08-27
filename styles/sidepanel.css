@@ -326,6 +326,9 @@ body.leetcode-theme {
   cursor: pointer;
   transition: var(--transition);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .quick-action-btn:hover {
@@ -379,8 +382,103 @@ body.leetcode-theme {
   }
 }
 
-/* LeetCode Welcome Message Styles */
-.leetcode-welcome-message .leetcode-welcome-bubble {
+/* Guide Me Icon Animation */
+.guide-icon {
+  transition: all 0.3s ease;
+  margin-right: 6px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* Debug button styling */
+.debug-btn {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border-color: #c44569;
+}
+
+.debug-btn:hover {
+  background: linear-gradient(135deg, #ee5a24, #d63031);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(238, 90, 36, 0.4);
+}
+
+.guide-icon:hover {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.guide-icon .grid-box {
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.quick-action-btn:hover .guide-icon .grid-box:nth-child(1) {
+  transform: translate(2px, 0);
+}
+
+.quick-action-btn:hover .guide-icon .grid-box:nth-child(2) {
+  transform: translate(0, 2px);
+}
+
+.quick-action-btn:hover .guide-icon .grid-box:nth-child(3) {
+  transform: translate(-2px, 0);
+}
+
+.quick-action-btn:hover .guide-icon .grid-box:nth-child(4) {
+  transform: translate(0, -2px);
+}
+
+/* Enhanced animations with keyframes */
+@keyframes gridPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.quick-action-btn:hover .guide-icon .grid-box {
+  animation: gridPulse 0.6s ease-in-out;
+}
+
+.quick-action-btn:hover .guide-icon .grid-box:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.quick-action-btn:hover .guide-icon .grid-box:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.quick-action-btn:hover .guide-icon .grid-box:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.quick-action-btn:hover .guide-icon .grid-box:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+/* Clicked state animation */
+.guide-icon-clicked .grid-box {
+  animation: gridClick 0.6s ease-in-out !important;
+}
+
+@keyframes gridClick {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(0.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Welcome Message Styles */
+#leetcode-welcome .message-bubble {
   /* Softer professional dark tone */
   background: linear-gradient(
     135deg,
@@ -397,7 +495,7 @@ body.leetcode-theme {
   overflow: hidden;
 }
 
-.leetcode-welcome-message .leetcode-welcome-bubble::before {
+#leetcode-welcome .message-bubble::before {
   content: "";
   position: absolute;
   top: 0;
@@ -413,13 +511,13 @@ body.leetcode-theme {
   pointer-events: none;
 }
 
-.leetcode-welcome-message .leetcode-welcome-bubble p {
+#leetcode-welcome .message-bubble p {
   position: relative;
   z-index: 1;
   margin: 8px 0;
 }
 
-.leetcode-welcome-message .leetcode-welcome-bubble strong {
+#leetcode-welcome .message-bubble strong {
   color: #4caf50;
   text-shadow: 0 0 6px rgba(76, 175, 80, 0.2);
 }

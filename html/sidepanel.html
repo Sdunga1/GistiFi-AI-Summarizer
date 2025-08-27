@@ -38,8 +38,8 @@
     <!-- Chat Messages Container -->
     <main class="chat-container">
       <div id="chat-messages" class="chat-messages">
-        <!-- Welcome Message -->
-        <div class="message bot-message">
+        <!-- Regular Mode Welcome Message -->
+        <div class="message bot-message" id="regular-welcome">
           <div class="message-avatar">
             <img src="../assets/icon.png" alt="GistiFi" />
           </div>
@@ -50,6 +50,29 @@
                 <li>📄 Summarize articles and webpages</li>
                 <li>🧠 Analyze code complexity</li>
                 <li>💡 Answer questions about the current page</li>
+              </ul>
+              <p>What would you like me to help you with today?</p>
+            </div>
+            <div class="message-time">Just now</div>
+          </div>
+        </div>
+
+        <!-- LeetCode Mode Welcome Message (initially hidden) -->
+        <div
+          class="message bot-message"
+          id="leetcode-welcome"
+          style="display: none"
+        >
+          <div class="message-avatar">
+            <img src="../assets/icon.png" alt="GistiFi" />
+          </div>
+          <div class="message-content">
+            <div class="message-bubble">
+              <p>👋 Welcome to GistiFi AI! I can help you:</p>
+              <ul>
+                <li>🧭 Get guided through LeetCode problems</li>
+                <li>🧠 Analyze code complexity and performance</li>
+                <li>📚 Find helpful resources and learning materials</li>
               </ul>
               <p>What would you like me to help you with today?</p>
             </div>
@@ -75,14 +98,93 @@
           />
           LeetCode Mode
         </button>
-        <button class="quick-action-btn" data-action="summarize">
+
+        <!-- Regular Mode Buttons -->
+        <button
+          class="quick-action-btn"
+          data-action="summarize"
+          style="display: inline-flex"
+        >
           📄 Summarize Page
         </button>
         <button class="quick-action-btn" data-action="analyze-code">
           🧠 Analyze Code
         </button>
-        <button class="quick-action-btn" data-action="ask-question">
+        <button
+          class="quick-action-btn"
+          data-action="ask-question"
+          style="display: inline-flex"
+        >
           💬 Ask Question
+        </button>
+
+        <!-- LeetCode Mode Buttons (initially hidden) -->
+        <button
+          class="quick-action-btn"
+          data-action="guide-me"
+          style="display: none"
+        >
+          <svg
+            class="guide-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect
+              class="grid-box"
+              width="7"
+              height="7"
+              x="3"
+              y="3"
+              rx="1"
+            ></rect>
+            <rect
+              class="grid-box"
+              width="7"
+              height="7"
+              x="14"
+              y="3"
+              rx="1"
+            ></rect>
+            <rect
+              class="grid-box"
+              width="7"
+              height="7"
+              x="14"
+              y="14"
+              rx="1"
+            ></rect>
+            <rect
+              class="grid-box"
+              width="7"
+              height="7"
+              x="3"
+              y="14"
+              rx="1"
+            ></rect>
+          </svg>
+          Guide Me
+        </button>
+        <button
+          class="quick-action-btn"
+          data-action="resources"
+          style="display: none"
+        >
+          📚 Resources
+        </button>
+
+        <!-- Debug button for testing problem extraction -->
+        <button
+          class="quick-action-btn debug-btn"
+          data-action="debug-extract"
+          style="display: none"
+        >
+          🔍 Debug Extract
         </button>
       </div>
     </main>
@@ -98,7 +200,7 @@
             maxlength="5000"
           ></textarea>
           <div class="input-actions">
-            <button id="attach-btn" class="icon-btn" title="Options">
+            <button id="attach-btn" class="icon-btn" title="Response Options">
               <svg
                 width="20"
                 height="20"
@@ -144,15 +246,15 @@
     <div id="options-modal" class="modal hidden">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Summary Options</h3>
+          <h3>Response Options</h3>
           <button class="close-modal">&times;</button>
         </div>
         <div class="modal-body">
           <div class="option-group">
-            <label>Summary Type:</label>
-            <select id="summary-type">
-              <option value="brief">Brief Summary</option>
-              <option value="detailed">Detailed Summary</option>
+            <label>Response Type:</label>
+            <select id="response-type">
+              <option value="brief">Brief Response</option>
+              <option value="detailed">Detailed Response</option>
               <option value="bullets">Bullet Points</option>
               <option value="custom">Custom Length</option>
             </select>
@@ -162,7 +264,7 @@
             id="custom-length-group"
             style="display: none"
           >
-            <label>Word Count:</label>
+            <label>Response Length:</label>
             <input
               type="number"
               id="custom-word-count"
@@ -181,12 +283,18 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button id="apply-options" class="btn-primary">Apply</button>
+          <button id="apply-options" class="btn-primary">Apply Options</button>
           <button class="close-modal">Cancel</button>
         </div>
       </div>
     </div>
 
+    <!-- Load modules first -->
+    <script src="../scripts/leetcodeExtractor.js"></script>
+    <script src="../scripts/guideMePrompts.js"></script>
+    <script src="../scripts/guideMeSession.js"></script>
+
+    <!-- Load main script last -->
     <script src="../scripts/sidepanel.js"></script>
   </body>
 </html>

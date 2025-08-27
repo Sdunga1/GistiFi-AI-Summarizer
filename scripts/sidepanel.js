@@ -3,7 +3,7 @@
 class GistiFiChat {
   constructor() {
     this.currentOptions = {
-      summaryType: "brief",
+      responseType: "brief",
       analysisType: "bigoh",
       customWordCount: 200,
     };
@@ -21,6 +21,9 @@ class GistiFiChat {
     this.setupCharCounter();
     this.setupCloseDetection();
     this.checkLeetCodeMode();
+
+    // Set initial button state based on current mode
+    this.toggleActionButtons(this.isLeetCodeModeActive());
   }
 
   async getCurrentTab() {
@@ -55,6 +58,9 @@ class GistiFiChat {
             this.loadChatHTML("regular");
           }
         }
+
+        // Set button state based on actual mode, not just page type
+        this.toggleActionButtons(this.isLeetCodeModeActive());
       }
     });
   }
@@ -63,6 +69,78 @@ class GistiFiChat {
     const leetcodeBtn = document.getElementById("leetcode-mode-btn");
     if (leetcodeBtn) {
       leetcodeBtn.style.display = show ? "inline-flex" : "none";
+    }
+  }
+
+  toggleActionButtons(isLeetCodeMode) {
+    const guideMeBtn = document.querySelector('[data-action="guide-me"]');
+    const resourcesBtn = document.querySelector('[data-action="resources"]');
+    const debugBtn = document.querySelector('[data-action="debug-extract"]');
+    const summarizeBtn = document.querySelector('[data-action="summarize"]');
+    const askQuestionBtn = document.querySelector(
+      '[data-action="ask-question"]'
+    );
+
+    if (isLeetCodeMode) {
+      // Show LeetCode-specific buttons
+      if (guideMeBtn) guideMeBtn.style.display = "inline-flex";
+      if (resourcesBtn) resourcesBtn.style.display = "inline-flex";
+      if (debugBtn) debugBtn.style.display = "inline-flex";
+      // Hide regular mode buttons
+      if (summarizeBtn) summarizeBtn.style.display = "none";
+      if (askQuestionBtn) askQuestionBtn.style.display = "none";
+    } else {
+      // Show regular mode buttons
+      if (summarizeBtn) summarizeBtn.style.display = "inline-flex";
+      if (askQuestionBtn) askQuestionBtn.style.display = "inline-flex";
+      // Hide LeetCode-specific buttons
+      if (guideMeBtn) guideMeBtn.style.display = "none";
+      if (resourcesBtn) resourcesBtn.style.display = "none";
+      if (debugBtn) debugBtn.style.display = "none";
+    }
+
+    // Toggle welcome messages
+    this.toggleWelcomeMessages(isLeetCodeMode);
+
+    // Update placeholder text
+    this.updatePlaceholderText(isLeetCodeMode);
+  }
+
+  toggleWelcomeMessages(isLeetCodeMode) {
+    const regularWelcome = document.getElementById("regular-welcome");
+    const leetcodeWelcome = document.getElementById("leetcode-welcome");
+
+    if (isLeetCodeMode) {
+      if (regularWelcome) regularWelcome.style.display = "none";
+      if (leetcodeWelcome) leetcodeWelcome.style.display = "block";
+    } else {
+      if (regularWelcome) regularWelcome.style.display = "block";
+      if (leetcodeWelcome) leetcodeWelcome.style.display = "none";
+    }
+  }
+
+  updatePlaceholderText(isLeetCodeMode) {
+    const chatInput = document.getElementById("chat-input");
+    if (chatInput) {
+      if (isLeetCodeMode) {
+        chatInput.placeholder =
+          "Ask for guidance, paste code to analyze, or ask about resources...";
+      } else {
+        chatInput.placeholder = "Type your message or paste code here...";
+      }
+    }
+  }
+
+  animateGuideIcon() {
+    const guideIcon = document.querySelector(".guide-icon");
+    if (guideIcon) {
+      // Add a temporary class for enhanced animation
+      guideIcon.classList.add("guide-icon-clicked");
+
+      // Remove the class after animation completes
+      setTimeout(() => {
+        guideIcon.classList.remove("guide-icon-clicked");
+      }, 600);
     }
   }
 
@@ -89,9 +167,13 @@ class GistiFiChat {
       const loaded = await this.loadChatHTML("leetcode");
       if (!loaded) {
         this.clearChatFully();
-        this.addLeetCodeWelcomeMessage();
+        // The welcome message is now handled by toggleWelcomeMessages
+        this.toggleWelcomeMessages(true);
         await this.saveCurrentChatHTML("leetcode");
       }
+
+      // Update button state and UI for LeetCode mode
+      this.toggleActionButtons(true);
 
       console.log("LeetCode Mode activated");
     }
@@ -125,6 +207,9 @@ class GistiFiChat {
       this.addStatusMessage("LeetCode Mode: DEACTIVATED");
       await this.saveCurrentChatHTML("regular");
 
+      // Update button state and UI for regular mode
+      this.toggleActionButtons(false);
+
       console.log("LeetCode Mode deactivated");
     }
   }
@@ -137,6 +222,9 @@ class GistiFiChat {
       leetcodeBtn.innerHTML =
         '<img src="https://img.icons8.com/?size=100&id=9L16NypUzu38&format=png&color=000000" alt="LeetCode" class="leetcode-icon" width="16" height="16"> ✅ LeetCode Mode';
       document.body.classList.add("leetcode-theme");
+
+      // Update button state for LeetCode mode
+      this.toggleActionButtons(true);
     }
   }
 
@@ -162,37 +250,33 @@ class GistiFiChat {
 
   clearChatFully() {
     const messagesContainer = document.getElementById("chat-messages");
+
+    // Store welcome messages before clearing
+    const regularWelcome = document.getElementById("regular-welcome");
+    const leetcodeWelcome = document.getElementById("leetcode-welcome");
+
+    // Clear all messages
     messagesContainer.innerHTML = "";
+
+    // Restore the appropriate welcome message based on current mode
+    if (this.isLeetCodeModeActive()) {
+      if (leetcodeWelcome) {
+        messagesContainer.appendChild(leetcodeWelcome.cloneNode(true));
+      }
+    } else {
+      if (regularWelcome) {
+        messagesContainer.appendChild(regularWelcome.cloneNode(true));
+      }
+    }
+
+    // Reset Guide Me session if active
+    if (this.guideMeSession && this.guideMeSession.isActive()) {
+      this.guideMeSession.resetSession();
+    }
+
     if (this.currentTabId) {
       chrome.storage.local.remove(`chat_history_${this.currentTabId}`);
     }
-  }
-
-  addLeetCodeWelcomeMessage() {
-    const chatMessages = document.getElementById("chat-messages");
-    const messageDiv = document.createElement("div");
-    messageDiv.className = "message bot-message leetcode-welcome-message";
-
-    const timestamp = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    messageDiv.innerHTML = `
-      <div class="message-avatar">
-        <img src="../assets/icon.png" alt="GistiFi" />
-      </div>
-      <div class="message-content">
-        <div class="message-bubble leetcode-welcome-bubble">
-          <p><strong>Welcome to GistiFi AI: LeetCode Mode</strong></p>
-          <p>Let me assist you as a mentor in solving the problem. Let's do it together💪</p>
-        </div>
-        <div class="message-time">${timestamp}</div>
-      </div>
-    `;
-
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
   // Save current chat container HTML for a given channel ("regular" | "leetcode")
@@ -283,6 +367,12 @@ class GistiFiChat {
       btn.addEventListener("click", this.handleQuickAction.bind(this));
     });
 
+    // Add enhanced animation for guide me button
+    const guideMeBtn = document.querySelector('[data-action="guide-me"]');
+    if (guideMeBtn) {
+      guideMeBtn.addEventListener("click", this.animateGuideIcon.bind(this));
+    }
+
     // Header buttons
     document
       .getElementById("settings-btn")
@@ -304,8 +394,8 @@ class GistiFiChat {
 
     // Summary type change
     document
-      .getElementById("summary-type")
-      .addEventListener("change", this.handleSummaryTypeChange.bind(this));
+      .getElementById("response-type")
+      .addEventListener("change", this.handleResponseTypeChange.bind(this));
   }
 
   setupCharCounter() {
@@ -390,6 +480,15 @@ class GistiFiChat {
       case "ask-question":
         this.promptQuestion();
         break;
+      case "guide-me":
+        this.promptGuideMe();
+        break;
+      case "resources":
+        this.showResources();
+        break;
+      case "debug-extract":
+        await this.debugProblemExtraction();
+        break;
       case "leetcode-mode":
         if (this.isLeetCodeModeActive()) {
           await this.deactivateLeetCodeMode();
@@ -405,6 +504,12 @@ class GistiFiChat {
     this.isProcessing = true;
 
     try {
+      // Check if we're in an active Guide Me session
+      if (this.guideMeSession && this.guideMeSession.isActive()) {
+        await this.handleGuideMeConversation(message);
+        return;
+      }
+
       // Check if it's code (simple heuristic)
       if (this.isCodeContent(message)) {
         await this.analyzeCode(message);
@@ -413,12 +518,43 @@ class GistiFiChat {
         message.toLowerCase().includes("summary")
       ) {
         await this.summarizePage();
+      } else if (
+        message.toLowerCase().includes("guide") ||
+        message.toLowerCase().includes("help")
+      ) {
+        if (this.isLeetCodeModeActive()) {
+          this.promptGuideMe();
+        } else {
+          this.addMessage(
+            "I can help you summarize this page or analyze code. Try using the quick action buttons or type 'summarize this page' for summaries!",
+            "bot"
+          );
+        }
+      } else if (
+        message.toLowerCase().includes("resources") ||
+        message.toLowerCase().includes("resource")
+      ) {
+        if (this.isLeetCodeModeActive()) {
+          this.showResources();
+        } else {
+          this.addMessage(
+            "I can help you summarize this page or analyze code. Try using the quick action buttons or type 'summarize this page' for summaries!",
+            "bot"
+          );
+        }
       } else {
-        // General AI response (you can enhance this)
-        this.addMessage(
-          "I can help you summarize this page or analyze code. Try using the quick action buttons or type 'summarize this page' for summaries!",
-          "bot"
-        );
+        // General AI response based on mode
+        if (this.isLeetCodeModeActive()) {
+          this.addMessage(
+            "I can help you get guided through LeetCode problems, analyze code, or find resources. Try using the quick action buttons or ask me for guidance!",
+            "bot"
+          );
+        } else {
+          this.addMessage(
+            "I can help you summarize this page or analyze code. Try using the quick action buttons or type 'summarize this page' for summaries!",
+            "bot"
+          );
+        }
       }
     } catch (error) {
       this.addMessage(`Error: ${error.message}`, "bot", "error");
@@ -426,6 +562,222 @@ class GistiFiChat {
       this.showLoading(false);
       this.isProcessing = false;
     }
+  }
+
+  async handleGuideMeConversation(message) {
+    try {
+      // Handle special commands
+      if (message.toLowerCase() === "reset") {
+        this.guideMeSession.resetSession();
+        this.addMessage(
+          "🔄 Guide Me session has been reset. Click 'Guide Me' again to start a new session!",
+          "bot"
+        );
+        return;
+      }
+
+      if (message.toLowerCase() === "status") {
+        const status = this.guideMeSession.getSessionStatus();
+        this.addMessage(this.formatSessionStatus(status), "bot");
+        return;
+      }
+
+      // Get API key
+      const { geminiApiKey } = await chrome.storage.sync.get(["geminiApiKey"]);
+      if (!geminiApiKey) {
+        this.addMessage(
+          "Please set your Gemini API key in settings first to use Guide Me mode.",
+          "bot",
+          "error"
+        );
+        return;
+      }
+
+      // Add user message to session
+      this.guideMeSession.addMessage("user", message);
+
+      // Prepare the conversation context for the LLM
+      const conversationContext =
+        this.guideMeSession.buildConversationContext();
+
+      // Send to Gemini with the system prompt
+      const response = await this.getGuideMeResponse(
+        conversationContext,
+        geminiApiKey
+      );
+
+      // Add bot response to history
+      this.addMessage(response, "bot");
+
+      // Add bot response to session
+      this.guideMeSession.addMessage("assistant", response);
+
+      // Check if we should transition to next phase or end session
+      this.updateGuideMePhase(message, response);
+    } catch (error) {
+      console.error("Guide Me conversation error:", error);
+      this.addMessage(
+        `I encountered an error while guiding you: ${error.message}. Let's continue from where we left off.`,
+        "bot",
+        "error"
+      );
+    }
+  }
+
+  async getGuideMeResponse(context, apiKey) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: context }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 300,
+            topP: 0.8,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || "API request failed");
+    }
+
+    const data = await response.json();
+    return (
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "I'm here to guide you. What would you like to work on first?"
+    );
+  }
+
+  containsHint(response) {
+    const hintKeywords = [
+      "hint",
+      "think about",
+      "consider",
+      "try",
+      "approach",
+      "strategy",
+      "method",
+    ];
+    return hintKeywords.some((keyword) =>
+      response.toLowerCase().includes(keyword)
+    );
+  }
+
+  updateGuideMePhase(userMessage, botResponse) {
+    if (!this.guideMeSession || !this.guideMeSession.isActive()) return;
+
+    const session = this.guideMeSession.getCurrentSession();
+
+    // Simple phase detection based on conversation content
+    if (session.currentPhase === "introduction") {
+      if (
+        userMessage.toLowerCase().includes("understand") ||
+        userMessage.toLowerCase().includes("problem")
+      ) {
+        this.guideMeSession.updatePhase(
+          "problem_understanding",
+          "User wants to understand the problem"
+        );
+      }
+    } else if (session.currentPhase === "problem_understanding") {
+      if (
+        userMessage.toLowerCase().includes("approach") ||
+        userMessage.toLowerCase().includes("solution")
+      ) {
+        this.guideMeSession.updatePhase(
+          "approach_discussion",
+          "User wants to discuss approaches"
+        );
+      }
+    } else if (session.currentPhase === "approach_discussion") {
+      if (
+        userMessage.toLowerCase().includes("code") ||
+        userMessage.toLowerCase().includes("implement")
+      ) {
+        this.guideMeSession.updatePhase(
+          "implementation",
+          "User wants to implement solution"
+        );
+      }
+    } else if (session.currentPhase === "implementation") {
+      if (
+        userMessage.toLowerCase().includes("test") ||
+        userMessage.toLowerCase().includes("optimize")
+      ) {
+        this.guideMeSession.updatePhase(
+          "testing_optimization",
+          "User wants to test and optimize"
+        );
+      }
+    } else if (session.currentPhase === "testing_optimization") {
+      if (
+        userMessage.toLowerCase().includes("feedback") ||
+        userMessage.toLowerCase().includes("done")
+      ) {
+        this.guideMeSession.updatePhase(
+          "feedback_next_steps",
+          "User wants feedback"
+        );
+        this.completeGuideMeSession();
+      }
+    }
+
+    // Update hint count if the bot response contains hints
+    if (this.containsHint(botResponse)) {
+      this.guideMeSession.incrementHints();
+    }
+
+    // Check if session should end
+    if (this.guideMeSession.shouldEndSession()) {
+      this.completeGuideMeSession();
+    }
+  }
+
+  completeGuideMeSession() {
+    if (!this.guideMeSession || !this.guideMeSession.isActive()) return;
+
+    const sessionSummary = this.guideMeSession.completeSession();
+
+    this.addMessage(
+      `🎉 **Great job completing this problem!** 🌟<br><br>` +
+        `**Session Summary:**<br>` +
+        `• Problem: ${sessionSummary.problem}<br>` +
+        `• Difficulty: ${sessionSummary.difficulty}<br>` +
+        `• Phase Completed: ${sessionSummary.finalPhase}<br>` +
+        `• Hints Used: ${sessionSummary.hintsUsed}/${this.guideMeSession.maxHints}<br>` +
+        `• Total Messages: ${sessionSummary.totalMessages}<br>` +
+        `• Session Duration: ${sessionSummary.duration} minutes<br><br>` +
+        `**Next Steps:**<br>` +
+        `• Practice related problems in the same category<br>` +
+        `• Review time/space complexity concepts<br>` +
+        `• Click the "📚 Resources" button to learn more!<br><br>` +
+        `Would you like to try another problem or explore resources?`,
+      "bot"
+    );
+  }
+
+  formatSessionStatus(status) {
+    if (!status.active) {
+      return status.message;
+    }
+
+    return (
+      `**Active Guide Me Session** 📊<br>` +
+      `• Problem: ${status.problem}<br>` +
+      `• Current Phase: ${status.currentPhase
+        .replace("_", " ")
+        .toUpperCase()}<br>` +
+      `• Hints Used: ${status.hintsUsed}<br>` +
+      `• Messages: ${status.messages}<br>` +
+      `• Duration: ${status.duration}<br>` +
+      `• Started: ${status.startTime}<br><br>` +
+      `Type "reset" to start over or "status" to see this again.`
+    );
   }
 
   isCodeContent(text) {
@@ -478,9 +830,9 @@ class GistiFiChat {
       }
 
       // Generate summary
-      const summary = await this.getSummaryFromGemini(
+      const summary = await this.getResponseFromGemini(
         response.text,
-        this.currentOptions.summaryType,
+        this.currentOptions.responseType,
         geminiApiKey
       );
       this.addMessage(summary, "bot");
@@ -495,6 +847,13 @@ class GistiFiChat {
         "error"
       );
     }
+  }
+
+  promptQuestion() {
+    const chatInput = document.getElementById("chat-input");
+    chatInput.value = "Ask me anything about this page...";
+    chatInput.focus();
+    chatInput.select();
   }
 
   async analyzeCode(code) {
@@ -514,7 +873,7 @@ class GistiFiChat {
         code,
         this.currentOptions.analysisType
       );
-      const analysis = await this.getSummaryFromGemini(
+      const analysis = await this.getResponseFromGemini(
         prompt,
         "detailed",
         geminiApiKey
@@ -556,16 +915,16 @@ ${code}`,
     return promptMap[type] || promptMap.bigoh;
   }
 
-  async getSummaryFromGemini(text, type, apiKey) {
+  async getResponseFromGemini(text, type, apiKey) {
     const maxLength = 30000;
     const processedText =
       text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
 
     const promptMap = {
-      brief: `Summarize this in 2-4 sentences:\n\n${processedText}`,
-      detailed: `Provide a detailed summary in well-structured paragraphs:\n\n${processedText}`,
-      bullets: `Summarize this in 5-7 bullet points:\n\n${processedText}`,
-      custom: `Summarize this in approximately ${this.currentOptions.customWordCount} words:\n\n${processedText}`,
+      brief: `Provide a brief response in 2-4 sentences:\n\n${processedText}`,
+      detailed: `Provide a detailed response in well-structured paragraphs:\n\n${processedText}`,
+      bullets: `Provide a response in 5-7 bullet points:\n\n${processedText}`,
+      custom: `Provide a response in approximately ${this.currentOptions.customWordCount} words:\n\n${processedText}`,
     };
 
     const prompt = promptMap[type] || promptMap.brief;
@@ -656,24 +1015,29 @@ ${code}`,
     chatInput.select();
   }
 
-  promptQuestion() {
-    const chatInput = document.getElementById("chat-input");
-    chatInput.value = "Ask me anything about this page...";
-    chatInput.focus();
-    chatInput.select();
-  }
-
   openSettings() {
     chrome.runtime.openOptionsPage();
   }
 
   clearChat() {
     const messagesContainer = document.getElementById("chat-messages");
-    // Keep welcome message, remove others
-    const welcomeMessage = messagesContainer.querySelector(".message");
+
+    // Store welcome messages before clearing
+    const regularWelcome = document.getElementById("regular-welcome");
+    const leetcodeWelcome = document.getElementById("leetcode-welcome");
+
+    // Clear all messages
     messagesContainer.innerHTML = "";
-    if (welcomeMessage) {
-      messagesContainer.appendChild(welcomeMessage);
+
+    // Restore the appropriate welcome message based on current mode
+    if (this.isLeetCodeModeActive()) {
+      if (leetcodeWelcome) {
+        messagesContainer.appendChild(leetcodeWelcome.cloneNode(true));
+      }
+    } else {
+      if (regularWelcome) {
+        messagesContainer.appendChild(regularWelcome.cloneNode(true));
+      }
     }
 
     // Clear chat history
@@ -690,11 +1054,11 @@ ${code}`,
     document.getElementById("options-modal").classList.add("hidden");
   }
 
-  handleSummaryTypeChange() {
-    const summaryType = document.getElementById("summary-type").value;
+  handleResponseTypeChange() {
+    const responseType = document.getElementById("response-type").value;
     const customLengthGroup = document.getElementById("custom-length-group");
 
-    if (summaryType === "custom") {
+    if (responseType === "custom") {
       customLengthGroup.style.display = "block";
     } else {
       customLengthGroup.style.display = "none";
@@ -703,7 +1067,7 @@ ${code}`,
 
   applyOptions() {
     this.currentOptions = {
-      summaryType: document.getElementById("summary-type").value,
+      responseType: document.getElementById("response-type").value,
       analysisType: document.getElementById("analysis-type").value,
       customWordCount:
         parseInt(document.getElementById("custom-word-count").value) || 200,
@@ -711,7 +1075,7 @@ ${code}`,
 
     this.closeOptionsModal();
     this.addMessage(
-      "Options updated! Your next requests will use these settings.",
+      "Response options updated! Your next requests will use these settings.",
       "bot"
     );
   }
@@ -829,6 +1193,149 @@ ${code}`,
         }
       }
     });
+  }
+
+  promptGuideMe() {
+    // First, get the problem statement from the current LeetCode page
+    this.getLeetCodeProblemInfo().then((problemInfo) => {
+      // Initialize the Guide Me system
+      if (!this.guideMePrompts) {
+        this.guideMePrompts = new GuideMePrompts();
+      }
+      if (!this.guideMeSession) {
+        this.guideMeSession = new GuideMeSessionManager();
+      }
+
+      const systemPrompt =
+        this.guideMePrompts.getGuideMeSystemPrompt(problemInfo);
+
+      this.addMessage(
+        `I'm here to guide you through this LeetCode problem - **${
+          problemInfo.title || "Current Problem"
+        }**! 🧭<br><br>` +
+          `I can help you with:<br>` +
+          `• Understanding the problem statement<br>` +
+          `• Breaking down the approach<br>` +
+          `• Step-by-step solution walkthrough<br>` +
+          `• Time and space complexity analysis<br>` +
+          `• Common pitfalls to avoid<br><br>` +
+          `What specific aspect would you like me to help you with?<br><br>` +
+          `💡 **Pro Tip**: I'll guide you through the interview process step-by-step, helping you think through the problem like a real coding interview!`,
+        "bot"
+      );
+
+      // Start a new Guide Me session
+      this.guideMeSession.startSession(problemInfo, systemPrompt);
+    });
+  }
+
+  async debugProblemExtraction() {
+    this.addMessage("🔍 **Debug: Testing Problem Extraction**", "bot");
+
+    try {
+      const problemInfo = await this.getLeetCodeProblemInfo();
+
+      this.addMessage(
+        `**Extraction Results:**<br>` +
+          `• Title: ${problemInfo.title}<br>` +
+          `• Difficulty: ${problemInfo.difficulty}<br>` +
+          `• Category: ${problemInfo.category}<br>` +
+          `• Problem Statement: ${
+            problemInfo.problemStatement
+              ? "Found (" + problemInfo.problemStatement.length + " chars)"
+              : "Not found"
+          }<br>` +
+          `• Examples: ${
+            problemInfo.examples ? problemInfo.examples.length : 0
+          } found<br>` +
+          `• Constraints: ${
+            problemInfo.constraints ? problemInfo.constraints.length : 0
+          } found<br>` +
+          `• URL: ${problemInfo.url}<br><br>` +
+          `Check the browser console for detailed extraction logs.`,
+        "bot"
+      );
+
+      // Also log to console for debugging
+      console.log("Debug extraction complete:", problemInfo);
+    } catch (error) {
+      this.addMessage(`❌ **Debug Error:** ${error.message}`, "bot", "error");
+      console.error("Debug extraction error:", error);
+    }
+  }
+
+  async getLeetCodeProblemInfo() {
+    try {
+      console.log("Getting LeetCode problem info...");
+
+      // Try to get problem info from the current page
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+
+      console.log("Current tab:", tab);
+
+      if (tab && tab.url && tab.url.includes("leetcode.com")) {
+        console.log(
+          "LeetCode page detected, sending message to content script..."
+        );
+
+        // Send message to content script to extract problem info
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          type: "GET_LEETCODE_PROBLEM_INFO",
+        });
+
+        console.log("Response from content script:", response);
+
+        if (response && response.problemInfo) {
+          console.log("Successfully got problem info:", response.problemInfo);
+          return response.problemInfo;
+        } else {
+          console.log("No problem info in response");
+        }
+      } else {
+        console.log("Not a LeetCode page or no tab found");
+      }
+
+      // Fallback to default info
+      console.log("Using fallback problem info");
+      return {
+        title: "Current LeetCode Problem",
+        difficulty: "Unknown",
+        category: "Algorithm",
+        problemStatement: "",
+        examples: [],
+        constraints: [],
+        url: tab ? tab.url : window.location.href,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("Error getting LeetCode problem info:", error);
+      return {
+        title: "Current LeetCode Problem",
+        difficulty: "Unknown",
+        category: "Algorithm",
+        problemStatement: "",
+        examples: [],
+        constraints: [],
+        url: window.location.href,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  showResources() {
+    this.addMessage(
+      "Here are some helpful resources for this problem: 📚<br><br>" +
+        "• <strong>Problem Discussion:</strong> Check the Discuss tab for community solutions<br>" +
+        "• <strong>Related Topics:</strong> Review similar problems and concepts<br>" +
+        "• <strong>Practice Problems:</strong> Try similar difficulty problems<br>" +
+        "• <strong>Learning Paths:</strong> Follow structured learning sequences<br>" +
+        "• <strong>Video Solutions:</strong> Watch step-by-step explanations<br><br>" +
+        "Would you like me to help you find specific resources or explain any concepts?",
+      "bot"
+    );
   }
 }
 
