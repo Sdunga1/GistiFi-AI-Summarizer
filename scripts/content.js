@@ -246,7 +246,7 @@ if (isExtensionContextValid()) {
   cleanupOldButtons();
 }
 
-// Enhanced LeetCode Problem Extractor
+// LeetCode Problem Extractor - embedded in content script for direct access
 class LeetCodeProblemExtractor {
   constructor() {
     this.selectors = {
@@ -280,14 +280,16 @@ class LeetCodeProblemExtractor {
         ".text-red-s",
       ],
 
-      // Problem content selectors
+      // Problem content selectors - updated for current LeetCode structure
       problemContent: [
+        // Primary selector for current LeetCode
+        'div[data-track-load="description_content"]',
+        // Legacy selectors as fallbacks
         '[data-cy="question-content"]',
         ".content__1YWB",
         ".question-content__JfgR",
         '[class*="content"]',
         ".description__24sA",
-        // Additional selectors
         '[data-testid="question-content"]',
         ".question-content",
         ".problem-description",
@@ -342,6 +344,8 @@ class LeetCodeProblemExtractor {
         problemStatement: this.extractProblemStatement(),
         examples: this.extractExamples(),
         constraints: this.extractConstraints(),
+        similarQuestions: this.extractSimilarQuestions(),
+        userCode: this.extractUserCode(),
         url: window.location.href,
         timestamp: new Date().toISOString(),
       };
@@ -402,30 +406,37 @@ class LeetCodeProblemExtractor {
     console.log("Extracting category...");
     const tags = [];
 
-    // Try the new specific selectors first (based on the HTML structure you provided)
-    const newSelectors = [
-      // Target the topic tags within the complex nested structure
+    // Target the exact topics section structure from the HTML you provided
+    const topicSelectors = [
+      // Primary: Look for the topics container with the specific class structure
+      'div.mt-2.flex.flex-wrap.gap-1.pl-7 a[href^="/tag/"]',
+      // Alternative: Look for any topic tags with the specific styling
+      'a.bg-fill-secondary.text-text-secondary[href^="/tag/"]',
+      // Fallback: Any link that starts with /tag/
       'a[href^="/tag/"]',
-      // Alternative selectors for topic tags
-      ".bg-fill-secondary.text-text-secondary",
-      '[class*="bg-fill-secondary"]',
-      // Fallback to general tag selectors
-      ".tag__2PqS",
-      ".tag__1G08",
-      '[class*="tag"]',
-      ".topic-tag__1jni",
-      '[data-testid="topic-tag"]',
-      ".topic-tag",
-      ".problem-tag",
     ];
 
-    for (const selector of newSelectors) {
+    for (const selector of topicSelectors) {
       const elements = document.querySelectorAll(selector);
       elements.forEach((element) => {
         const tagText = element.textContent.trim();
         if (tagText && !tags.includes(tagText) && tagText.length > 0) {
-          // Filter out very short or invalid tags
-          if (tagText.length > 1 && !tagText.includes("\n")) {
+          // Only include actual topic tags (not navigation or UI elements)
+          if (
+            tagText.length > 1 &&
+            !tagText.includes("\n") &&
+            !tagText.includes("Topics") &&
+            !tagText.includes("Companies") &&
+            !tagText.includes("My Lists") &&
+            !tagText.includes("Notebook") &&
+            !tagText.includes("Submissions") &&
+            !tagText.includes("Progress") &&
+            !tagText.includes("Points") &&
+            !tagText.includes("C++") &&
+            !tagText.includes("Auto") &&
+            !tagText.includes("K") &&
+            !tagText.includes("770")
+          ) {
             tags.push(tagText);
             console.log(
               "Found topic tag:",
@@ -436,6 +447,11 @@ class LeetCodeProblemExtractor {
           }
         }
       });
+
+      // If we found tags with this selector, break (don't try fallbacks)
+      if (tags.length > 0) {
+        break;
+      }
     }
 
     const category = tags.length > 0 ? tags.join(", ") : "Algorithm";
@@ -445,27 +461,66 @@ class LeetCodeProblemExtractor {
 
   extractProblemStatement() {
     console.log("Extracting problem statement...");
+
+    // Primary selector for the main content container
+    const mainContentSelector = 'div[data-track-load="description_content"]';
+    const element = document.querySelector(mainContentSelector);
+
+    if (element) {
+      console.log("Found main content container");
+
+      // Clone the element to work with
+      const clone = element.cloneNode(true);
+
+      // Remove examples section (everything after "Example 1:")
+      const exampleStart = clone.querySelector("p strong.example");
+      if (exampleStart) {
+        let currentNode = exampleStart.parentElement;
+        while (currentNode && currentNode.nextSibling) {
+          currentNode.nextSibling.remove();
+        }
+        currentNode.remove(); // Remove the example paragraph itself
+      }
+
+      // Remove constraints section (everything after "Constraints:")
+      const constraintsStart = clone.querySelector("p strong:not(.example)");
+      if (
+        constraintsStart &&
+        constraintsStart.textContent.includes("Constraints")
+      ) {
+        let currentNode = constraintsStart.parentElement;
+        while (currentNode && currentNode.nextSibling) {
+          currentNode.nextSibling.remove();
+        }
+        currentNode.remove(); // Remove the constraints paragraph itself
+      }
+
+      // Get the clean problem statement
+      const text = clone.textContent.trim();
+      if (text) {
+        console.log(
+          "Extracted problem statement:",
+          text.substring(0, 100) + "..."
+        );
+        return this.cleanText(text);
+      }
+    }
+
+    // Fallback to old selectors
     for (const selector of this.selectors.problemContent) {
       const element = document.querySelector(selector);
       if (element) {
-        // Remove code blocks and examples to get clean problem statement
-        const clone = element.cloneNode(true);
-
-        // Remove code blocks
-        const codeBlocks = clone.querySelectorAll("pre, code");
-        codeBlocks.forEach((block) => block.remove());
-
-        // Remove example blocks
-        const exampleBlocks = clone.querySelectorAll('[class*="example"]');
-        exampleBlocks.forEach((block) => block.remove());
-
-        const text = clone.textContent.trim();
+        const text = element.textContent.trim();
         if (text) {
-          console.log("Found problem statement with selector:", selector);
+          console.log(
+            "Found problem statement with fallback selector:",
+            selector
+          );
           return this.cleanText(text);
         }
       }
     }
+
     console.log("No problem statement found with any selector");
     return "";
   }
@@ -474,36 +529,236 @@ class LeetCodeProblemExtractor {
     console.log("Extracting examples...");
     const examples = [];
 
-    for (const selector of this.selectors.examples) {
-      const elements = document.querySelectorAll(selector);
-      elements.forEach((element) => {
-        const exampleText = element.textContent.trim();
-        if (exampleText) {
-          examples.push(this.cleanText(exampleText));
+    // Primary selector for the main content container
+    const mainContentSelector = 'div[data-track-load="description_content"]';
+    const element = document.querySelector(mainContentSelector);
+
+    if (element) {
+      console.log("Found main content container for examples");
+
+      // Find all example sections
+      const exampleElements = element.querySelectorAll("p strong.example");
+
+      exampleElements.forEach((exampleHeader, index) => {
+        const exampleSection = this.extractExampleSection(exampleHeader);
+        if (exampleSection) {
+          examples.push(exampleSection);
+          console.log(
+            `Extracted example ${index + 1}:`,
+            exampleSection.substring(0, 100) + "..."
+          );
         }
       });
+    }
+
+    // Fallback to old selectors if no examples found
+    if (examples.length === 0) {
+      for (const selector of this.selectors.examples) {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach((element) => {
+          const exampleText = element.textContent.trim();
+          if (exampleText) {
+            examples.push(this.cleanText(exampleText));
+          }
+        });
+      }
     }
 
     console.log("Found examples:", examples.length);
     return examples;
   }
 
+  extractExampleSection(exampleHeader) {
+    try {
+      // Get the example header text
+      const headerText = exampleHeader.textContent.trim();
+
+      // Find the pre block that follows this example header
+      let currentNode = exampleHeader.parentElement;
+      let exampleContent = "";
+
+      // Look for the pre block that contains the example
+      while (currentNode && currentNode.nextSibling) {
+        if (currentNode.nextSibling.tagName === "PRE") {
+          const preContent = currentNode.nextSibling.textContent.trim();
+          exampleContent = `${headerText}\n${preContent}`;
+          break;
+        }
+        currentNode = currentNode.nextSibling;
+      }
+
+      return exampleContent || headerText;
+    } catch (error) {
+      console.error("Error extracting example section:", error);
+      return exampleHeader.textContent.trim();
+    }
+  }
+
   extractConstraints() {
     console.log("Extracting constraints...");
     const constraints = [];
 
-    for (const selector of this.selectors.constraints) {
-      const elements = document.querySelectorAll(selector);
-      elements.forEach((element) => {
-        const constraintText = element.textContent.trim();
-        if (constraintText && this.isConstraint(constraintText)) {
-          constraints.push(this.cleanText(constraintText));
+    // Primary selector for the main content container
+    const mainContentSelector = 'div[data-track-load="description_content"]';
+    const element = document.querySelector(mainContentSelector);
+
+    if (element) {
+      console.log("Found main content container for constraints");
+
+      // Find the constraints section
+      const constraintsHeader = Array.from(
+        element.querySelectorAll("p strong")
+      ).find((strong) => strong.textContent.includes("Constraints"));
+
+      if (constraintsHeader) {
+        console.log("Found constraints header");
+
+        // Get the constraints list that follows
+        let currentNode = constraintsHeader.parentElement;
+        let constraintsList = [];
+
+        // Look for the ul/li elements that contain the constraints
+        while (currentNode && currentNode.nextSibling) {
+          if (currentNode.nextSibling.tagName === "UL") {
+            const listItems = currentNode.nextSibling.querySelectorAll("li");
+            listItems.forEach((li) => {
+              const constraintText = li.textContent.trim();
+              if (constraintText) {
+                constraintsList.push(constraintText);
+                console.log("Found constraint:", constraintText);
+              }
+            });
+            break;
+          }
+          currentNode = currentNode.nextSibling;
         }
-      });
+
+        if (constraintsList.length > 0) {
+          constraints.push(...constraintsList);
+        }
+      }
+    }
+
+    // Fallback to old selectors if no constraints found
+    if (constraints.length === 0) {
+      for (const selector of this.selectors.constraints) {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach((element) => {
+          const constraintText = element.textContent.trim();
+          if (constraintText && this.isConstraint(constraintText)) {
+            constraints.push(this.cleanText(constraintText));
+          }
+        });
+      }
     }
 
     console.log("Found constraints:", constraints.length);
     return constraints;
+  }
+
+  extractSimilarQuestions() {
+    console.log("Extracting similar questions...");
+    const similarQuestions = [];
+
+    // Look for the "Similar Questions" section
+    const similarQuestionsSection = Array.from(
+      document.querySelectorAll("div.text-body")
+    ).find((div) => div.textContent.includes("Similar Questions"));
+
+    if (similarQuestionsSection) {
+      console.log("Found similar questions section");
+
+      // Navigate to the container that holds the similar questions
+      const container = similarQuestionsSection.closest("div.flex.flex-col");
+      if (container) {
+        // Find all similar question links
+        const questionLinks = container.querySelectorAll(
+          'a[href^="/problems/"]'
+        );
+
+        questionLinks.forEach((link, index) => {
+          const questionTitle = link.textContent.trim();
+          const questionUrl = link.href;
+
+          // Get the difficulty if available
+          const difficultyElement = link
+            .closest("div.flex.w-full")
+            .querySelector(".text-yellow, .text-green-s, .text-red-s");
+          const difficulty = difficultyElement
+            ? difficultyElement.textContent.trim()
+            : "Unknown";
+
+          if (questionTitle && questionTitle.length > 0) {
+            const similarQuestion = {
+              title: questionTitle,
+              url: questionUrl,
+              difficulty: difficulty,
+            };
+
+            similarQuestions.push(similarQuestion);
+            console.log(
+              `Found similar question ${index + 1}:`,
+              questionTitle,
+              `(${difficulty})`
+            );
+          }
+        });
+      }
+    }
+
+    console.log("Found similar questions:", similarQuestions.length);
+    return similarQuestions;
+  }
+
+  extractUserCode() {
+    console.log("Extracting user code...");
+    let userCode = "";
+
+    // Look for Monaco editor content
+    const monacoEditor = document.querySelector(
+      ".view-lines.monaco-mouse-cursor-text"
+    );
+
+    if (monacoEditor) {
+      console.log("Found Monaco editor");
+
+      // Extract all lines of code
+      const codeLines = monacoEditor.querySelectorAll(".view-line");
+      const codeArray = [];
+
+      codeLines.forEach((line, index) => {
+        const lineText = line.textContent || "";
+        if (lineText.trim()) {
+          codeArray.push(lineText);
+        }
+      });
+
+      userCode = codeArray.join("\n");
+      console.log("Extracted user code:", userCode.substring(0, 100) + "...");
+    } else {
+      // Fallback: Look for other code editor structures
+      const fallbackSelectors = [
+        "pre code",
+        ".code-editor",
+        '[class*="editor"]',
+        '[class*="code"]',
+        'textarea[class*="code"]',
+      ];
+
+      for (const selector of fallbackSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          userCode = element.textContent || element.value || "";
+          if (userCode.trim()) {
+            console.log("Found user code with fallback selector:", selector);
+            break;
+          }
+        }
+      }
+    }
+
+    console.log("User code length:", userCode.length);
+    return userCode;
   }
 
   isConstraint(text) {
@@ -546,6 +801,8 @@ class LeetCodeProblemExtractor {
       problemStatement: "",
       examples: [],
       constraints: [],
+      similarQuestions: [],
+      userCode: "",
       url: window.location.href,
       timestamp: new Date().toISOString(),
     };
