@@ -1,282 +1,268 @@
 /**
- * Guide Me Session Manager Module
- * Manages the interview session state and conversation flow
+ * Guide Me Session Manager
+ * Manages the state and flow of a Guide Me interview session
  */
 
-class GuideMeSessionManager {
-  constructor() {
-    this.currentSession = null;
-    this.maxHints = 5;
-    this.maxTokens = 300;
+class GuideMeSession {
+  constructor(problemInfo, userCode) {
+    this.problemInfo = problemInfo;
+    this.userCode = userCode;
+    this.exploredTopics = [];
+    this.currentFocus = null;
+    this.conversationHistory = [];
+    this.userInsights = {};
+    this.sessionStartTime = new Date();
+    this.isActive = false;
   }
 
   /**
    * Start a new Guide Me session
    */
-  startSession(problemInfo, systemPrompt) {
-    this.currentSession = {
-      id: this.generateSessionId(),
-      problemInfo: problemInfo,
-      systemPrompt: systemPrompt,
-      conversationHistory: [],
-      currentPhase: "introduction",
-      hintsGiven: 0,
-      startTime: new Date(),
-      lastActivity: new Date(),
-      phaseTransitions: [],
-    };
-
-    console.log("Started new Guide Me session:", this.currentSession.id);
-    return this.currentSession;
+  startSession() {
+    this.isActive = true;
+    this.sessionStartTime = new Date();
+    console.log("Guide Me session started for:", this.problemInfo.title);
+    return this.getSessionStatus();
   }
 
   /**
-   * Add a message to the conversation history
+   * Set the current focus topic
    */
-  addMessage(role, content) {
-    if (!this.currentSession) return;
-
-    const message = {
-      id: this.generateMessageId(),
-      role: role, // 'user' or 'assistant'
-      content: content,
-      timestamp: new Date(),
-      phase: this.currentSession.currentPhase,
-    };
-
-    this.currentSession.conversationHistory.push(message);
-    this.currentSession.lastActivity = new Date();
-
-    console.log(`Added ${role} message to session ${this.currentSession.id}`);
+  setCurrentFocus(topicId) {
+    this.currentFocus = topicId;
+    console.log("Guide Me focus set to:", topicId);
   }
 
   /**
-   * Update the current phase
+   * Set conversation mode for a specific feature
    */
-  updatePhase(newPhase, reason = "") {
-    if (!this.currentSession) return;
+  setConversationMode(featureId) {
+    this.conversationMode = featureId;
+    console.log("Guide Me conversation mode set to:", featureId);
+  }
 
-    const oldPhase = this.currentSession.currentPhase;
-    this.currentSession.currentPhase = newPhase;
+  /**
+   * Add a topic to explored topics
+   */
+  addExploredTopic(topicId) {
+    if (!this.exploredTopics.includes(topicId)) {
+      this.exploredTopics.push(topicId);
+      console.log("Added topic to explored:", topicId);
+    }
+  }
 
-    this.currentSession.phaseTransitions.push({
-      from: oldPhase,
-      to: newPhase,
-      timestamp: new Date(),
-      reason: reason,
+  /**
+   * Add user insight for a topic
+   */
+  addUserInsight(topic, insight) {
+    this.userInsights[topic] = insight;
+    console.log("User insight added for", topic, ":", insight);
+  }
+
+  /**
+   * Add message to conversation history
+   */
+  addMessage(role, content, timestamp = new Date()) {
+    this.conversationHistory.push({
+      role,
+      content,
+      timestamp,
     });
-
-    console.log(`Phase transition: ${oldPhase} -> ${newPhase} (${reason})`);
   }
 
   /**
-   * Increment hint count
+   * Get the current session status
    */
-  incrementHints() {
-    if (!this.currentSession) return;
+  getSessionStatus() {
+    return {
+      isActive: this.isActive,
+      problemTitle: this.problemInfo.title,
+      exploredTopics: this.exploredTopics,
+      currentFocus: this.currentFocus,
+      sessionDuration: this.getSessionDuration(),
+      totalMessages: this.conversationHistory.length,
+    };
+  }
 
-    this.currentSession.hintsGiven = Math.min(
-      this.currentSession.hintsGiven + 1,
-      this.maxHints
-    );
+  /**
+   * Get session duration in minutes
+   */
+  getSessionDuration() {
+    if (!this.sessionStartTime) return 0;
+    const duration = new Date() - this.sessionStartTime;
+    return Math.round(duration / 60000); // Convert to minutes
+  }
 
-    console.log(
-      `Hints given: ${this.currentSession.hintsGiven}/${this.maxHints}`
+  /**
+   * Build context for LLM interactions
+   */
+  buildLLMContext() {
+    return {
+      problem: this.problemInfo,
+      userCode: this.userCode,
+      explored: this.exploredTopics,
+      currentFocus: this.currentFocus,
+      userInsights: this.userInsights,
+      sessionDuration: this.getSessionDuration(),
+    };
+  }
+
+  /**
+   * Get available features that haven't been explored
+   */
+  getAvailableFeatures() {
+    const allFeatures = [
+      {
+        id: "intuition",
+        label: "🧠 Understand the approach",
+        icon: "🧠",
+        description: "Learn the core reasoning and data structure choices",
+      },
+      {
+        id: "edgeCases",
+        label: "⚠️ Handle edge cases",
+        icon: "⚠️",
+        description:
+          "Identify problem-specific edge cases and handling strategies",
+      },
+      {
+        id: "complexity",
+        label: "📊 Analyze complexity",
+        icon: "📊",
+        description: "Understand time/space complexity requirements",
+      },
+      {
+        id: "followUps",
+        label: "🔗 Prepare for follow-ups",
+        icon: "🔗",
+        description: "Get ready for interview follow-up questions",
+      },
+    ];
+
+    return allFeatures.filter(
+      (feature) => !this.exploredTopics.includes(feature.id)
     );
+  }
+
+  /**
+   * Get feature by ID
+   */
+  getFeature(featureId) {
+    const allFeatures = [
+      { id: "intuition", label: "🧠 Understand the approach", icon: "🧠" },
+      { id: "edgeCases", label: "⚠️ Handle edge cases", icon: "⚠️" },
+      { id: "complexity", label: "📊 Analyze complexity", icon: "📊" },
+      { id: "followUps", label: "🔗 Prepare for follow-ups", icon: "🔗" },
+    ];
+
+    return allFeatures.find((f) => f.id === featureId);
   }
 
   /**
    * Check if session should end
    */
   shouldEndSession() {
-    if (!this.currentSession) return false;
-
-    // End if all phases completed
-    if (this.currentSession.currentPhase === "feedback_next_steps") {
-      return true;
-    }
-
-    // End if too many hints given
-    if (this.currentSession.hintsGiven >= this.maxHints) {
-      return true;
-    }
+    // End if all topics explored
+    if (this.exploredTopics.length >= 4) return true;
 
     // End if session is too long (more than 30 minutes)
-    const sessionDuration =
-      Date.now() - this.currentSession.startTime.getTime();
-    if (sessionDuration > 30 * 60 * 1000) {
-      return true;
-    }
+    if (this.getSessionDuration() > 30) return true;
 
     return false;
   }
 
   /**
-   * Get session status
+   * Check if session is active
    */
-  getSessionStatus() {
-    if (!this.currentSession) {
-      return {
-        active: false,
-        message: "No active Guide Me session",
-      };
-    }
-
-    const session = this.currentSession;
-    const duration = Math.round(
-      (Date.now() - session.startTime.getTime()) / 1000 / 60
-    );
-
-    return {
-      active: true,
-      sessionId: session.id,
-      problem: session.problemInfo.title,
-      currentPhase: session.currentPhase,
-      hintsUsed: `${session.hintsGiven}/${this.maxHints}`,
-      messages: session.conversationHistory.length,
-      duration: `${duration} minutes`,
-      startTime: session.startTime.toLocaleTimeString(),
-    };
-  }
-
-  /**
-   * Get conversation context for LLM
-   */
-  buildConversationContext() {
-    if (!this.currentSession) return "";
-
-    const session = this.currentSession;
-    let context = `System Prompt:\n${session.systemPrompt}\n\n`;
-
-    // Add conversation history
-    if (session.conversationHistory.length > 0) {
-      context += "Conversation History:\n";
-      session.conversationHistory.forEach((msg) => {
-        context += `${msg.role === "user" ? "Candidate" : "Interviewer"}: ${
-          msg.content
-        }\n`;
-      });
-      context += "\n";
-    }
-
-    // Add current session state
-    context += `Current Phase: ${session.currentPhase}\n`;
-    context += `Hints Given: ${session.hintsGiven}/${this.maxHints}\n`;
-    context += `Session Duration: ${Math.round(
-      (Date.now() - session.startTime.getTime()) / 1000 / 60
-    )} minutes\n\n`;
-
-    context +=
-      "Instructions: Respond as the expert interviewer. Keep responses short, focused, and guide the candidate through the problem-solving process. Always end with a question to keep the conversation flowing.";
-
-    return context;
+  isSessionActive() {
+    return this.isActive === true;
   }
 
   /**
    * Complete the session
    */
   completeSession() {
-    if (!this.currentSession) return null;
-
-    const session = this.currentSession;
-    const endTime = new Date();
-    const duration = Math.round(
-      (endTime.getTime() - session.startTime.getTime()) / 1000 / 60
-    );
-
-    const sessionSummary = {
-      id: session.id,
-      problem: session.problemInfo.title,
-      difficulty: session.problemInfo.difficulty,
-      category: session.problemInfo.category,
-      finalPhase: session.currentPhase,
-      hintsUsed: session.hintsGiven,
-      totalMessages: session.conversationHistory.length,
-      duration: duration,
-      startTime: session.startTime,
-      endTime: endTime,
-      phaseTransitions: session.phaseTransitions,
+    this.isActive = false;
+    const summary = {
+      totalTopics: this.exploredTopics.length,
+      sessionDuration: this.getSessionDuration(),
+      exploredTopics: this.exploredTopics,
+      recommendations: this.generateRecommendations(),
     };
 
-    console.log("Completed Guide Me session:", sessionSummary);
-
-    // Clear current session
-    this.currentSession = null;
-
-    return sessionSummary;
+    console.log("Guide Me session completed:", summary);
+    return summary;
   }
 
   /**
-   * Reset the current session
+   * Generate recommendations based on session
+   */
+  generateRecommendations() {
+    const recommendations = [];
+
+    if (this.exploredTopics.length < 2) {
+      recommendations.push(
+        "Consider exploring more aspects of the problem to get a comprehensive understanding"
+      );
+    }
+
+    if (this.userCode && this.userCode.length < 50) {
+      recommendations.push(
+        "Try implementing a solution to get hands-on practice"
+      );
+    }
+
+    recommendations.push(
+      "Check the Resources section for additional learning materials"
+    );
+
+    return recommendations;
+  }
+
+  /**
+   * Reset the session
    */
   resetSession() {
-    if (this.currentSession) {
-      console.log("Resetting Guide Me session:", this.currentSession.id);
-      this.currentSession = null;
-    }
+    this.exploredTopics = [];
+    this.currentFocus = null;
+    this.conversationHistory = [];
+    this.userInsights = {};
+    this.isActive = false;
+    console.log("Guide Me session reset");
   }
 
   /**
-   * Get session statistics
+   * Get session summary for display
    */
-  getSessionStats() {
-    if (!this.currentSession) return null;
-
-    const session = this.currentSession;
-    const userMessages = session.conversationHistory.filter(
-      (msg) => msg.role === "user"
-    ).length;
-    const assistantMessages = session.conversationHistory.filter(
-      (msg) => msg.role === "assistant"
-    ).length;
-
+  getSessionSummary() {
     return {
-      totalMessages: session.conversationHistory.length,
-      userMessages: userMessages,
-      assistantMessages: assistantMessages,
-      hintsGiven: session.hintsGiven,
-      currentPhase: session.currentPhase,
-      sessionDuration: Math.round(
-        (Date.now() - session.startTime.getTime()) / 1000 / 60
-      ),
+      title: this.problemInfo.title,
+      difficulty: this.problemInfo.difficulty,
+      topicsExplored: this.exploredTopics.length,
+      sessionDuration: this.getSessionDuration(),
+      currentFocus: this.currentFocus,
+      nextSteps: this.getNextSteps(),
     };
   }
 
   /**
-   * Generate unique session ID
+   * Get suggested next steps
    */
-  generateSessionId() {
-    return (
-      "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9)
-    );
-  }
+  getNextSteps() {
+    const availableFeatures = this.getAvailableFeatures();
 
-  /**
-   * Generate unique message ID
-   */
-  generateMessageId() {
-    return "msg_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-  }
+    if (availableFeatures.length === 0) {
+      return ["Session complete! Check Resources for more learning materials"];
+    }
 
-  /**
-   * Check if session is active
-   */
-  isActive() {
-    return this.currentSession !== null;
-  }
-
-  /**
-   * Get current session
-   */
-  getCurrentSession() {
-    return this.currentSession;
+    return availableFeatures.map((feature) => `Explore: ${feature.label}`);
   }
 }
 
 // Export for use in other modules
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = GuideMeSessionManager;
+  module.exports = GuideMeSession;
 } else {
   // Browser environment
-  window.GuideMeSessionManager = GuideMeSessionManager;
+  window.GuideMeSession = GuideMeSession;
 }

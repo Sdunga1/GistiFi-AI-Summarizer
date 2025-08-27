@@ -505,7 +505,7 @@ class GistiFiChat {
 
     try {
       // Check if we're in an active Guide Me session
-      if (this.guideMeSession && this.guideMeSession.isActive()) {
+      if (this.guideMeSession && this.guideMeSession.isSessionActive()) {
         await this.handleGuideMeConversation(message);
         return;
       }
@@ -582,38 +582,70 @@ class GistiFiChat {
         return;
       }
 
-      // Get API key
-      const { geminiApiKey } = await chrome.storage.sync.get(["geminiApiKey"]);
-      if (!geminiApiKey) {
-        this.addMessage(
-          "Please set your Gemini API key in settings first to use Guide Me mode.",
-          "bot",
-          "error"
-        );
+      // Check if user wants to move to next topic
+      if (
+        message.toLowerCase().includes("next") ||
+        message.toLowerCase().includes("move on")
+      ) {
+        this.moveToNextTopic();
         return;
       }
 
-      // Add user message to session
-      this.guideMeSession.addMessage("user", message);
+      // Check if user wants to end session
+      if (
+        message.toLowerCase().includes("end") ||
+        message.toLowerCase().includes("finish")
+      ) {
+        this.endGuideMeSession();
+        return;
+      }
 
-      // Prepare the conversation context for the LLM
-      const conversationContext =
-        this.guideMeSession.buildConversationContext();
+      // Continue conversation with LLM using the new system
+      try {
+        const context = this.guideMeSession.buildLLMContext();
+        const systemPrompt = this.guideMePrompts.buildConversationPrompt(
+          this.guideMeSession.currentFocus,
+          context
+        );
 
-      // Send to Gemini with the system prompt
-      const response = await this.getGuideMeResponse(
-        conversationContext,
-        geminiApiKey
-      );
+        const response = await this.sendToLLM(systemPrompt, message);
 
-      // Add bot response to history
-      this.addMessage(response, "bot");
+        if (response) {
+          this.addMessage(response, "bot");
 
-      // Add bot response to session
-      this.guideMeSession.addMessage("assistant", response);
+          // Add messages to session history
+          this.guideMeSession.addMessage("user", message);
+          this.guideMeSession.addMessage("assistant", response);
+        } else {
+          this.addMessage(
+            "❌ No response generated. Please try again.",
+            "bot",
+            "error"
+          );
+        }
+      } catch (llmError) {
+        console.error("LLM Error:", llmError);
 
-      // Check if we should transition to next phase or end session
-      this.updateGuideMePhase(message, response);
+        if (llmError.message.includes("API key")) {
+          this.addMessage(
+            "🔑 **API Key Required**: Please set your Gemini API key in the extension settings to use Guide Me mode.",
+            "bot",
+            "error"
+          );
+        } else if (llmError.message.includes("API request failed")) {
+          this.addMessage(
+            "🌐 **Network Error**: Unable to connect to AI service. Please check your internet connection and try again.",
+            "bot",
+            "error"
+          );
+        } else {
+          this.addMessage(
+            `❌ **AI Service Error**: ${llmError.message}. Please try again later.`,
+            "bot",
+            "error"
+          );
+        }
+      }
     } catch (error) {
       console.error("Guide Me conversation error:", error);
       this.addMessage(
@@ -624,158 +656,18 @@ class GistiFiChat {
     }
   }
 
-  async getGuideMeResponse(context, apiKey) {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: context }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 300,
-            topP: 0.8,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || "API request failed");
-    }
-
-    const data = await response.json();
-    return (
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "I'm here to guide you. What would you like to work on first?"
-    );
-  }
-
-  containsHint(response) {
-    const hintKeywords = [
-      "hint",
-      "think about",
-      "consider",
-      "try",
-      "approach",
-      "strategy",
-      "method",
-    ];
-    return hintKeywords.some((keyword) =>
-      response.toLowerCase().includes(keyword)
-    );
-  }
-
-  updateGuideMePhase(userMessage, botResponse) {
-    if (!this.guideMeSession || !this.guideMeSession.isActive()) return;
-
-    const session = this.guideMeSession.getCurrentSession();
-
-    // Simple phase detection based on conversation content
-    if (session.currentPhase === "introduction") {
-      if (
-        userMessage.toLowerCase().includes("understand") ||
-        userMessage.toLowerCase().includes("problem")
-      ) {
-        this.guideMeSession.updatePhase(
-          "problem_understanding",
-          "User wants to understand the problem"
-        );
-      }
-    } else if (session.currentPhase === "problem_understanding") {
-      if (
-        userMessage.toLowerCase().includes("approach") ||
-        userMessage.toLowerCase().includes("solution")
-      ) {
-        this.guideMeSession.updatePhase(
-          "approach_discussion",
-          "User wants to discuss approaches"
-        );
-      }
-    } else if (session.currentPhase === "approach_discussion") {
-      if (
-        userMessage.toLowerCase().includes("code") ||
-        userMessage.toLowerCase().includes("implement")
-      ) {
-        this.guideMeSession.updatePhase(
-          "implementation",
-          "User wants to implement solution"
-        );
-      }
-    } else if (session.currentPhase === "implementation") {
-      if (
-        userMessage.toLowerCase().includes("test") ||
-        userMessage.toLowerCase().includes("optimize")
-      ) {
-        this.guideMeSession.updatePhase(
-          "testing_optimization",
-          "User wants to test and optimize"
-        );
-      }
-    } else if (session.currentPhase === "testing_optimization") {
-      if (
-        userMessage.toLowerCase().includes("feedback") ||
-        userMessage.toLowerCase().includes("done")
-      ) {
-        this.guideMeSession.updatePhase(
-          "feedback_next_steps",
-          "User wants feedback"
-        );
-        this.completeGuideMeSession();
-      }
-    }
-
-    // Update hint count if the bot response contains hints
-    if (this.containsHint(botResponse)) {
-      this.guideMeSession.incrementHints();
-    }
-
-    // Check if session should end
-    if (this.guideMeSession.shouldEndSession()) {
-      this.completeGuideMeSession();
-    }
-  }
-
-  completeGuideMeSession() {
-    if (!this.guideMeSession || !this.guideMeSession.isActive()) return;
-
-    const sessionSummary = this.guideMeSession.completeSession();
-
-    this.addMessage(
-      `🎉 **Great job completing this problem!** 🌟<br><br>` +
-        `**Session Summary:**<br>` +
-        `• Problem: ${sessionSummary.problem}<br>` +
-        `• Difficulty: ${sessionSummary.difficulty}<br>` +
-        `• Phase Completed: ${sessionSummary.finalPhase}<br>` +
-        `• Hints Used: ${sessionSummary.hintsUsed}/${this.guideMeSession.maxHints}<br>` +
-        `• Total Messages: ${sessionSummary.totalMessages}<br>` +
-        `• Session Duration: ${sessionSummary.duration} minutes<br><br>` +
-        `**Next Steps:**<br>` +
-        `• Practice related problems in the same category<br>` +
-        `• Review time/space complexity concepts<br>` +
-        `• Click the "📚 Resources" button to learn more!<br><br>` +
-        `Would you like to try another problem or explore resources?`,
-      "bot"
-    );
-  }
-
   formatSessionStatus(status) {
-    if (!status.active) {
-      return status.message;
+    if (!status.isActive) {
+      return "No active Guide Me session";
     }
 
     return (
       `**Active Guide Me Session** 📊<br>` +
-      `• Problem: ${status.problem}<br>` +
-      `• Current Phase: ${status.currentPhase
-        .replace("_", " ")
-        .toUpperCase()}<br>` +
-      `• Hints Used: ${status.hintsUsed}<br>` +
-      `• Messages: ${status.messages}<br>` +
-      `• Duration: ${status.duration}<br>` +
-      `• Started: ${status.startTime}<br><br>` +
+      `• Problem: ${status.problemTitle}<br>` +
+      `• Current Focus: ${status.currentFocus || "None"}<br>` +
+      `• Topics Explored: ${status.exploredTopics.length}/4<br>` +
+      `• Messages: ${status.totalMessages}<br>` +
+      `• Duration: ${status.sessionDuration} minutes<br><br>` +
       `Type "reset" to start over or "status" to see this again.`
     );
   }
@@ -1015,6 +907,107 @@ ${code}`,
     chatInput.select();
   }
 
+  /**
+   * Add settings button to chat
+   */
+  addSettingsButton() {
+    const buttonContainer = document.createElement("div");
+    buttonContainer.className = "settings-button-container";
+    buttonContainer.style.cssText = `
+      display: flex;
+      justify-content: center;
+      margin: 15px 0;
+    `;
+
+    const button = document.createElement("button");
+    button.className = "settings-btn";
+    button.innerHTML = "⚙️ Open Settings";
+    button.style.cssText = `
+      padding: 12px 24px;
+      border: 2px solid #007bff;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    `;
+
+    button.addEventListener("mouseenter", () => {
+      button.style.background = "#0056b3";
+      button.style.borderColor = "#0056b3";
+    });
+
+    button.addEventListener("mouseleave", () => {
+      button.style.background = "#007bff";
+      button.style.borderColor = "#007bff";
+    });
+
+    button.addEventListener("click", () => {
+      this.openSettings();
+    });
+
+    buttonContainer.appendChild(button);
+
+    // Add the button to the chat
+    const chatContainer = document.querySelector(".chat-container");
+    if (chatContainer) {
+      chatContainer.appendChild(buttonContainer);
+    }
+  }
+
+  /**
+   * Send message to LLM for Guide Me mode
+   */
+  async sendToLLM(systemPrompt, userMessage) {
+    try {
+      // Get Gemini API key
+      const { geminiApiKey } = await chrome.storage.sync.get(["geminiApiKey"]);
+      if (!geminiApiKey) {
+        throw new Error(
+          "Please set your Gemini API key in settings first to use Guide Me mode."
+        );
+      }
+
+      // Build the complete prompt
+      const completePrompt = `${systemPrompt}\n\nUser: ${userMessage}\n\nAssistant:`;
+
+      // Send to Gemini
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: completePrompt }] }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 500,
+              topP: 0.8,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "API request failed");
+      }
+
+      const data = await response.json();
+      const responseText =
+        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "No response generated";
+
+      // Clean up the response
+      return responseText.trim();
+    } catch (error) {
+      console.error("Error sending to LLM:", error);
+      throw error;
+    }
+  }
+
   openSettings() {
     chrome.runtime.openOptionsPage();
   }
@@ -1195,38 +1188,70 @@ ${code}`,
     });
   }
 
-  promptGuideMe() {
-    // First, get the problem statement from the current LeetCode page
-    this.getLeetCodeProblemInfo().then((problemInfo) => {
-      // Initialize the Guide Me system
+  async promptGuideMe() {
+    try {
+      // Check if API key is set
+      const { geminiApiKey } = await chrome.storage.sync.get(["geminiApiKey"]);
+      if (!geminiApiKey) {
+        this.addMessage(
+          "🔑 **API Key Required**: Please set your Gemini API key in the extension settings to use Guide Me mode.\n\n" +
+            "Click the button below to open settings:",
+          "bot",
+          "error"
+        );
+
+        // Add settings button
+        this.addSettingsButton();
+        return;
+      }
+
+      // Get current problem info
+      const problemInfo = await this.getLeetCodeProblemInfo();
+
+      if (!problemInfo || !problemInfo.title) {
+        this.addMessage(
+          "❌ Could not detect a LeetCode problem. Please make sure you're on a LeetCode problem page.",
+          "bot",
+          "error"
+        );
+        return;
+      }
+
+      // Initialize Guide Me components
       if (!this.guideMePrompts) {
         this.guideMePrompts = new GuideMePrompts();
       }
-      if (!this.guideMeSession) {
-        this.guideMeSession = new GuideMeSessionManager();
-      }
 
-      const systemPrompt =
-        this.guideMePrompts.getGuideMeSystemPrompt(problemInfo);
+      // Start Guide Me session
+      this.guideMeSession = new GuideMeSession(
+        problemInfo,
+        problemInfo.userCode || ""
+      );
+      this.guideMeSession.startSession();
 
+      // Show welcome message with feature selection
       this.addMessage(
-        `I'm here to guide you through this LeetCode problem - **${
-          problemInfo.title || "Current Problem"
-        }**! 🧭<br><br>` +
-          `I can help you with:<br>` +
-          `• Understanding the problem statement<br>` +
-          `• Breaking down the approach<br>` +
-          `• Step-by-step solution walkthrough<br>` +
-          `• Time and space complexity analysis<br>` +
-          `• Common pitfalls to avoid<br><br>` +
-          `What specific aspect would you like me to help you with?<br><br>` +
-          `💡 **Pro Tip**: I'll guide you through the interview process step-by-step, helping you think through the problem like a real coding interview!`,
+        `🎯 **Guide Me Mode Activated!**\n\n` +
+          `I'm here to help you understand **${problemInfo.title}** (${problemInfo.difficulty}).\n\n` +
+          `Choose what you'd like to explore:\n\n` +
+          `🧠 **Understand the approach** - Learn the core reasoning and data structure choices\n` +
+          `⚠️ **Handle edge cases** - Identify problem-specific edge cases and handling strategies\n` +
+          `📊 **Analyze complexity** - Understand time/space complexity requirements\n` +
+          `🔗 **Prepare for follow-ups** - Get ready for interview follow-up questions\n\n` +
+          `What would you like to start with?`,
         "bot"
       );
 
-      // Start a new Guide Me session
-      this.guideMeSession.startSession(problemInfo, systemPrompt);
-    });
+      // Show feature selection buttons
+      this.showGuideMeFeatures();
+    } catch (error) {
+      console.error("Error starting Guide Me:", error);
+      this.addMessage(
+        "❌ Error starting Guide Me mode. Please try again.",
+        "bot",
+        "error"
+      );
+    }
   }
 
   async debugProblemExtraction() {
@@ -1266,30 +1291,23 @@ ${code}`,
 
   async getLeetCodeProblemInfo() {
     try {
-      console.log("Getting LeetCode problem info...");
-
       // Try to get problem info from the current page
       const [tab] = await chrome.tabs.query({
         active: true,
         currentWindow: true,
       });
 
-      console.log("Current tab:", tab);
-
       if (tab && tab.url && tab.url.includes("leetcode.com")) {
-        console.log(
-          "LeetCode page detected, sending message to content script..."
-        );
-
         // Send message to content script to extract problem info
         const response = await chrome.tabs.sendMessage(tab.id, {
           type: "GET_LEETCODE_PROBLEM_INFO",
         });
 
-        console.log("Response from content script:", response);
-
         if (response && response.problemInfo) {
-          console.log("Successfully got problem info:", response.problemInfo);
+          console.log(
+            "Successfully got problem info:",
+            response.problemInfo.title
+          );
           return response.problemInfo;
         } else {
           console.log("No problem info in response");
@@ -1327,15 +1345,348 @@ ${code}`,
 
   showResources() {
     this.addMessage(
-      "Here are some helpful resources for this problem: 📚<br><br>" +
-        "• <strong>Problem Discussion:</strong> Check the Discuss tab for community solutions<br>" +
-        "• <strong>Related Topics:</strong> Review similar problems and concepts<br>" +
-        "• <strong>Practice Problems:</strong> Try similar difficulty problems<br>" +
-        "• <strong>Learning Paths:</strong> Follow structured learning sequences<br>" +
-        "• <strong>Video Solutions:</strong> Watch step-by-step explanations<br><br>" +
-        "Would you like me to help you find specific resources or explain any concepts?",
+      `📚 **Resources & Learning Materials**\n\n` +
+        `Here are some helpful resources to enhance your problem-solving skills:\n\n` +
+        `🔗 **LeetCode Resources:**\n` +
+        `• [LeetCode Explore Cards](https://leetcode.com/explore/)\n` +
+        `• [LeetCode Discuss](https://leetcode.com/discuss/)\n` +
+        `• [LeetCode Solutions](https://leetcode.com/problemset/all/)\n\n` +
+        `📖 **Learning Materials:**\n` +
+        `• [GeeksforGeeks](https://www.geeksforgeeks.org/)\n` +
+        `• [HackerRank](https://www.hackerrank.com/)\n` +
+        `• [InterviewBit](https://www.interviewbit.com/)\n\n` +
+        `📚 **Books & Courses:**\n` +
+        `• "Cracking the Coding Interview" by Gayle McDowell\n` +
+        `• "Introduction to Algorithms" (CLRS)\n` +
+        `• [AlgoExpert](https://www.algoexpert.io/)\n\n` +
+        `💡 **Practice Tips:**\n` +
+        `• Start with Easy problems and gradually increase difficulty\n` +
+        `• Focus on understanding patterns rather than memorizing solutions\n` +
+        `• Practice explaining your solutions out loud\n` +
+        `• Review and optimize your solutions\n\n` +
+        `Happy learning! 🚀`,
       "bot"
     );
+  }
+
+  /**
+   * Show Guide Me feature selection buttons
+   */
+  showGuideMeFeatures() {
+    if (!this.guideMeSession) return;
+
+    const availableFeatures = this.guideMeSession.getAvailableFeatures();
+
+    if (availableFeatures.length === 0) {
+      this.addMessage(
+        "🎉 All topics have been explored! Check the Resources section for more learning materials.",
+        "bot"
+      );
+      return;
+    }
+
+    // Create feature selection message
+    let message = `**Choose a topic to explore:**\n\n`;
+
+    availableFeatures.forEach((feature) => {
+      message += `${feature.icon} **${feature.label}**\n`;
+      message += `   ${feature.description}\n\n`;
+    });
+
+    this.addMessage(message, "bot");
+
+    // Add feature selection buttons to the UI
+    this.addFeatureSelectionButtons(availableFeatures);
+  }
+
+  /**
+   * Add feature selection buttons to the UI
+   */
+  addFeatureSelectionButtons(features) {
+    // Create a container for the buttons
+    const buttonContainer = document.createElement("div");
+    buttonContainer.className = "guide-me-features";
+    buttonContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 10px 0;
+    `;
+
+    features.forEach((feature) => {
+      const button = document.createElement("button");
+      button.className = "guide-me-feature-btn";
+      button.innerHTML = `${feature.icon} ${feature.label}`;
+      button.style.cssText = `
+        padding: 10px 15px;
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        background: #007bff;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+        text-align: left;
+      `;
+
+      button.addEventListener("mouseenter", () => {
+        button.style.background = "#0056b3";
+        button.style.borderColor = "#0056b3";
+      });
+
+      button.addEventListener("mouseleave", () => {
+        button.style.background = "#007bff";
+        button.style.borderColor = "#007bff";
+      });
+
+      button.addEventListener("click", () => {
+        this.exploreFeature(feature.id);
+        buttonContainer.remove(); // Remove buttons after selection
+      });
+
+      buttonContainer.appendChild(button);
+    });
+
+    // Add the buttons to the chat
+    const chatContainer = document.querySelector(".chat-container");
+    if (chatContainer) {
+      chatContainer.appendChild(buttonContainer);
+    }
+  }
+
+  /**
+   * Explore a specific Guide Me feature
+   */
+  async exploreFeature(featureId) {
+    if (!this.guideMeSession || !this.guideMePrompts) {
+      this.addMessage(
+        "❌ Guide Me session not initialized. Please try again.",
+        "bot",
+        "error"
+      );
+      return;
+    }
+
+    try {
+      // Set current focus
+      this.guideMeSession.setCurrentFocus(featureId);
+
+      // Show exploration message
+      const feature = this.guideMeSession.getFeature(featureId);
+      this.addMessage(
+        `🔍 **Exploring: ${feature.label}**\n\n` +
+          `Let me help you understand this aspect of **${this.guideMeSession.problemInfo.title}**.\n\n` +
+          `Analyzing the problem and providing focused guidance...`,
+        "bot"
+      );
+
+      // Build system prompt for this feature
+      const context = this.guideMeSession.buildLLMContext();
+      const systemPrompt = this.guideMePrompts.buildFeaturePrompt(
+        featureId,
+        context
+      );
+
+      // Send to LLM
+      try {
+        const response = await this.sendToLLM(
+          systemPrompt,
+          `I want to explore: ${feature.label}`
+        );
+
+        if (response) {
+          // Add LLM response
+          this.addMessage(response, "bot");
+
+          // Update session state
+          this.guideMeSession.addExploredTopic(featureId);
+
+          // Start conversation mode for this feature
+          this.startFeatureConversation(featureId);
+        } else {
+          this.addMessage(
+            "❌ No response generated from AI. Please try again.",
+            "bot",
+            "error"
+          );
+        }
+      } catch (llmError) {
+        console.error("LLM Error:", llmError);
+
+        if (llmError.message.includes("API key")) {
+          this.addMessage(
+            "🔑 **API Key Required**: Please set your Gemini API key in the extension settings to use Guide Me mode.",
+            "bot",
+            "error"
+          );
+        } else if (llmError.message.includes("API request failed")) {
+          this.addMessage(
+            "🌐 **Network Error**: Unable to connect to AI service. Please check your internet connection and try again.",
+            "bot",
+            "error"
+          );
+        } else {
+          this.addMessage(
+            `❌ **AI Service Error**: ${llmError.message}. Please try again later.`,
+            "bot",
+            "error"
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error exploring feature:", error);
+      this.addMessage(
+        "❌ Error exploring feature. Please try again.",
+        "bot",
+        "error"
+      );
+    }
+  }
+
+  /**
+   * Start conversation mode for a specific feature
+   */
+  startFeatureConversation(featureId) {
+    if (!this.guideMeSession) return;
+
+    // Set conversation mode
+    this.guideMeSession.setConversationMode(featureId);
+
+    // Add conversation prompt
+    this.addMessage(
+      "💬 **Conversation Mode**: I'm here to guide you through this topic step by step.\n\n" +
+        "Feel free to ask questions, share your thoughts, or ask for clarification. " +
+        "I'll help you understand the concepts thoroughly before we move to the next topic.\n\n" +
+        "💡 **Commands**: Type 'next' to move to the next topic, 'end' to finish the session.",
+      "bot"
+    );
+
+    // Update input placeholder
+    const chatInput = document.getElementById("chat-input");
+    if (chatInput) {
+      chatInput.placeholder =
+        "Ask questions, share your thoughts, or type 'next' to move to next topic...";
+    }
+  }
+
+  /**
+   * Move to next topic in Guide Me session
+   */
+  moveToNextTopic() {
+    if (!this.guideMeSession) return;
+
+    // Check if session should end
+    if (this.guideMeSession.shouldEndSession()) {
+      this.endGuideMeSession();
+      return;
+    }
+
+    // Show available features
+    const availableFeatures = this.guideMeSession.getAvailableFeatures();
+
+    if (availableFeatures.length > 0) {
+      let message = `**Great! Let's move to the next topic. What would you like to explore?**\n\n`;
+
+      availableFeatures.forEach((feature) => {
+        message += `${feature.icon} **${feature.label}**\n`;
+        message += `   ${feature.description}\n\n`;
+      });
+
+      this.addMessage(message, "bot");
+
+      // Add feature selection buttons
+      this.addFeatureSelectionButtons(availableFeatures);
+
+      // Reset conversation mode
+      this.guideMeSession.setConversationMode(null);
+
+      // Reset input placeholder
+      const chatInput = document.getElementById("chat-input");
+      if (chatInput) {
+        chatInput.placeholder = "Type your message...";
+      }
+    } else {
+      this.endGuideMeSession();
+    }
+  }
+
+  /**
+   * End Guide Me session
+   */
+  endGuideMeSession() {
+    if (!this.guideMeSession) return;
+
+    const summary = this.guideMeSession.completeSession();
+    this.addMessage(
+      `🎉 **Guide Me Session Complete!**\n\n` +
+        `Great work! You've explored aspects of **${summary.title}**.\n\n` +
+        `**Session Summary:**\n` +
+        `• Topics explored: ${summary.totalTopics}/4\n` +
+        `• Session duration: ${summary.sessionDuration} minutes\n\n` +
+        `**Next Steps:**\n` +
+        `📚 Check the **Resources** section for additional learning materials\n` +
+        `💻 Try implementing a solution to practice what you've learned\n` +
+        `🔄 Start a new Guide Me session with another problem\n\n` +
+        `Keep practicing and good luck with your interviews! 🚀`,
+      "bot"
+    );
+
+    // Reset conversation mode
+    this.guideMeSession.setConversationMode(null);
+
+    // Reset input placeholder
+    const chatInput = document.getElementById("chat-input");
+    if (chatInput) {
+      chatInput.placeholder = "Type your message...";
+    }
+  }
+
+  /**
+   * Show next steps after exploring a feature (legacy method - now replaced)
+   */
+  showNextSteps(featureId) {
+    if (!this.guideMeSession) return;
+
+    // Check if session should end
+    if (this.guideMeSession.shouldEndSession()) {
+      const summary = this.guideMeSession.completeSession();
+      this.addMessage(
+        `🎉 **Guide Me Session Complete!**\n\n` +
+          `Great work! You've explored all aspects of **${summary.title}**.\n\n` +
+          `**Session Summary:**\n` +
+          `• Topics explored: ${summary.totalTopics}/4\n` +
+          `• Session duration: ${summary.sessionDuration} minutes\n\n` +
+          `**Next Steps:**\n` +
+          `📚 Check the **Resources** section for additional learning materials\n` +
+          `💻 Try implementing a solution to practice what you've learned\n` +
+          `🔄 Start a new Guide Me session with another problem\n\n` +
+          `Keep practicing and good luck with your interviews! 🚀`,
+        "bot"
+      );
+      return;
+    }
+
+    // Show available features
+    const availableFeatures = this.guideMeSession.getAvailableFeatures();
+
+    if (availableFeatures.length > 0) {
+      let message = `**What would you like to explore next?**\n\n`;
+
+      availableFeatures.forEach((feature) => {
+        message += `${feature.icon} **${feature.label}**\n`;
+        message += `   ${feature.description}\n\n`;
+      });
+
+      this.addMessage(message, "bot");
+
+      // Add next feature selection buttons
+      this.addFeatureSelectionButtons(availableFeatures);
+    } else {
+      this.addMessage(
+        "🎉 All topics explored! Check the Resources section for more learning materials.",
+        "bot"
+      );
+    }
   }
 }
 

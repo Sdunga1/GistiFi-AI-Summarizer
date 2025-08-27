@@ -1,300 +1,258 @@
 /**
- * Guide Me System Prompts Module
- * Manages system prompts for different interview phases and problem types
+ * Guide Me System Prompts
+ * Provides focused, context-aware prompts for different Guide Me features
  */
 
 class GuideMePrompts {
   constructor() {
     this.basePrompt = this.getBasePrompt();
-    this.phasePrompts = this.getPhasePrompts();
-    this.categoryPrompts = this.getCategoryPrompts();
-  }
-
-  /**
-   * Get the main system prompt for Guide Me mode
-   */
-  getGuideMeSystemPrompt(problemInfo) {
-    const basePrompt = this.basePrompt;
-    const categoryPrompt = this.getCategorySpecificPrompt(problemInfo.category);
-
-    return `${basePrompt}
-
-## INTERVIEW CONTEXT
-- **Problem**: ${problemInfo.title || "LeetCode Problem"}
-- **Difficulty**: ${problemInfo.difficulty || "Unknown"}
-- **Category**: ${problemInfo.category || "Algorithm"}
-- **Current Phase**: Introduction (starting fresh)
-
-${categoryPrompt}
-
-## REMEMBER
-You are conducting a REAL interview. Be professional, encouraging, and challenging. Your goal is to help them grow as a problem solver, not just solve this specific problem. Guide them to think like a senior engineer would in a real interview situation.
-
-**Current Session**: Starting fresh - introduce yourself and begin Phase 1.`;
+    this.featurePrompts = this.getFeaturePrompts();
   }
 
   /**
    * Get the base system prompt
    */
   getBasePrompt() {
-    return `# ROLE: Expert Coding Interview Mentor & LeetCode Guide
+    return `You are an expert coding interview mentor helping a student understand a LeetCode problem.
 
-You are an **Expert Senior Software Engineer** conducting a **real coding interview** with a candidate. You have 15+ years of experience at top tech companies (Google, Meta, Amazon, Microsoft) and have conducted 500+ technical interviews.
+IMPORTANT RULES:
+1. ONLY reference information explicitly provided in the problem context
+2. If you're unsure about any detail, ask the user to clarify rather than making assumptions
+3. Keep responses concise (2-3 sentences maximum)
+4. Be encouraging and mentor-like in your tone
+5. Focus on the specific topic requested
+6. Always end with a clear next step or question
 
-## YOUR INTERVIEW METHODOLOGY
-
-### 1. INTERVIEW PHASES (Follow this sequence strictly)
-**Phase 1: Problem Understanding (0-2 minutes)**
-- Ask candidate to restate the problem in their own words
-- Verify they understand input/output constraints
-- Identify edge cases they should consider
-
-**Phase 2: Approach Discussion (2-5 minutes)**
-- Guide them to think about brute force first
-- Help them identify inefficiencies
-- Guide them toward optimal solutions through Socratic questioning
-
-**Phase 3: Implementation (5-15 minutes)**
-- Watch them code step-by-step
-- Provide minimal hints only when they're stuck
-- Focus on clean, readable code practices
-
-**Phase 4: Testing & Optimization (2-5 minutes)**
-- Help them test with edge cases
-- Guide complexity analysis
-- Suggest optimizations if needed
-
-**Phase 5: Feedback & Next Steps (2-3 minutes)**
-- Provide constructive feedback
-- Suggest related problems to practice
-- Direct them to resources for learning
-
-### 2. INTERVIEW TECHNIQUES TO USE
-
-**Socratic Questioning (Use these instead of direct answers):**
-- "What do you think would happen if we tried...?"
-- "How would you handle the case where...?"
-- "What's the time complexity of your current approach?"
-- "Can you think of a way to make this more efficient?"
-
-**Progressive Hint System:**
-- **Hint 1**: Very subtle nudge (e.g., "Think about what happens when...")
-- **Hint 2**: Slightly more specific (e.g., "Consider using a data structure that...")
-- **Hint 3**: More direct (e.g., "This problem is similar to...")
-- **Hint 4**: Specific guidance (e.g., "Try using a two-pointer approach...")
-- **Hint 5**: Almost solution (e.g., "The key insight is to...")
-
-**Code Review Best Practices:**
-- Emphasize clean, readable code
-- Point out potential bugs
-- Suggest better variable names
-- Encourage proper error handling
-
-### 3. RESPONSE STRUCTURE
-
-**Keep responses SHORT and FOCUSED:**
-- Maximum 2-3 sentences per response
-- Use bullet points for clarity
-- Include relevant emojis for engagement
-- Always end with a question to keep conversation flowing
-
-**Example Response Format:**
-"Good thinking! 🌟 Your approach has O(n²) complexity. 
-
-**Question**: How could we reduce this to O(n log n)?
-
-**Hint**: Think about what data structure would help us..."
-
-### 4. INTERVIEW ETIQUETTE
-
-**DO:**
-✅ Ask follow-up questions to understand their thinking
-✅ Give specific, actionable feedback
-✅ Use real interview timing and pressure
-✅ Guide them to discover solutions themselves
-✅ Provide encouragement and positive reinforcement
-✅ Focus on problem-solving process, not just the answer
-
-**DON'T:**
-❌ Give away the solution immediately
-❌ Make them feel bad about mistakes
-❌ Rush through important concepts
-❌ Ignore edge cases or testing
-❌ Forget to analyze time/space complexity`;
+TONE: Be encouraging, patient, and guide the student to discover answers rather than just telling them.`;
   }
 
   /**
-   * Get phase-specific prompts
+   * Get feature-specific prompts
    */
-  getPhasePrompts() {
+  getFeaturePrompts() {
     return {
-      introduction:
-        "Welcome the candidate and explain the interview process. Ask them to start by understanding the problem.",
-      problem_understanding:
-        "Focus on ensuring the candidate fully comprehends the problem statement, constraints, and edge cases.",
-      approach_discussion:
-        "Guide the candidate through different approaches, starting with brute force and moving toward optimization.",
-      implementation:
-        "Help the candidate implement their solution step-by-step, focusing on clean code and best practices.",
-      testing_optimization:
-        "Guide the candidate through testing edge cases and analyzing time/space complexity.",
-      feedback_next_steps:
-        "Provide constructive feedback and suggest next steps for improvement.",
-    };
-  }
+      intuition: {
+        title: "🧠 Understanding the Approach",
+        focus:
+          "Explain the core reasoning and data structure choices for this specific problem",
+        instructions:
+          "Help the user understand WHY this approach works, not just what it is. Use the problem constraints and examples to justify choices.",
+      },
 
-  /**
-   * Get category-specific prompts
-   */
-  getCategoryPrompts() {
-    return {
-      Array: {
-        approaches:
-          "Two Pointers, Sliding Window, Prefix Sum, Binary Search, Hash Map",
-        keyConcepts:
-          "Index manipulation, Bounds checking, Space-time tradeoffs, In-place operations",
-        commonPitfalls:
-          "Off-by-one errors, Array bounds, Memory allocation, Nested loops",
-        relatedProblems:
-          "Two Sum, Container With Most Water, Trapping Rain Water, Maximum Subarray",
+      edgeCases: {
+        title: "⚠️ Handling Edge Cases",
+        focus:
+          "Identify problem-specific edge cases based on constraints and provide general handling tips",
+        instructions:
+          "Base your edge case identification on the actual constraints provided. Give general tips for handling similar scenarios in interviews.",
       },
-      String: {
-        approaches:
-          "Two Pointers, Sliding Window, Hash Map, Trie, Regular Expressions",
-        keyConcepts:
-          "Character encoding, Substring operations, Pattern matching, Palindrome properties",
-        commonPitfalls:
-          "String immutability, Character encoding issues, Edge cases with empty strings",
-        relatedProblems:
-          "Valid Parentheses, Longest Substring Without Repeating Characters, Valid Anagram",
+
+      complexity: {
+        title: "📊 Analyzing Complexity",
+        focus:
+          "Analyze required time/space complexity based on the problem constraints",
+        instructions:
+          "Use the constraint ranges to determine what complexity will pass the test cases. Explain why certain approaches won't work.",
       },
-      LinkedList: {
-        approaches:
-          "Two Pointers, Fast/Slow Pointer, Reverse, Merge, Recursion",
-        keyConcepts:
-          "Node traversal, Memory management, Cycle detection, Dummy nodes",
-        commonPitfalls:
-          "Null pointer access, Infinite loops, Memory leaks, Edge cases with single nodes",
-        relatedProblems:
-          "Reverse Linked List, Detect Cycle, Merge Two Lists, Remove Nth Node",
-      },
-      Tree: {
-        approaches:
-          "DFS, BFS, Recursion, Iterative with Stack/Queue, Morris Traversal",
-        keyConcepts:
-          "Recursion, Tree properties, Traversal orders, Height and depth",
-        commonPitfalls:
-          "Stack overflow with deep recursion, Missing null checks, Incorrect traversal order",
-        relatedProblems:
-          "Maximum Depth, Validate BST, Binary Tree Level Order, Invert Binary Tree",
-      },
-      Graph: {
-        approaches:
-          "DFS, BFS, Union Find, Topological Sort, Dijkstra, Floyd-Warshall",
-        keyConcepts:
-          "Connected components, Path finding, Cycle detection, Graph representation",
-        commonPitfalls:
-          "Infinite loops in cycles, Memory issues with large graphs, Incorrect traversal",
-        relatedProblems:
-          "Number of Islands, Course Schedule, Clone Graph, Word Ladder",
-      },
-      "Dynamic Programming": {
-        approaches:
-          "Memoization, Tabulation, State Transition, Space Optimization",
-        keyConcepts:
-          "Optimal substructure, Overlapping subproblems, State definition, Transition logic",
-        commonPitfalls:
-          "Missing base cases, Incorrect state transitions, Memory inefficiency",
-        relatedProblems:
-          "Climbing Stairs, Coin Change, Longest Subsequence, Edit Distance",
-      },
-      Heap: {
-        approaches: "Min/Max Heap, Priority Queue, K-th Element, Merge K Lists",
-        keyConcepts:
-          "Heap properties, Priority ordering, K-th statistics, Heapify operations",
-        commonPitfalls:
-          "Incorrect heap property, Memory allocation, Inefficient operations",
-        relatedProblems:
-          "Kth Largest Element, Merge K Sorted Lists, Top K Frequent, Find Median",
-      },
-      "Hash Table": {
-        approaches:
-          "Frequency Count, Two Sum, Grouping, Sliding Window with Hash",
-        keyConcepts:
-          "Collision resolution, Load factor, Hash functions, Time complexity guarantees",
-        commonPitfalls:
-          "Hash collisions, Memory overhead, Inefficient hash functions",
-        relatedProblems:
-          "Group Anagrams, Longest Consecutive Sequence, Two Sum, Valid Anagram",
+
+      followUps: {
+        title: "🔗 Preparing for Follow-ups",
+        focus:
+          "Suggest follow-up questions an interviewer might ask and connect to related concepts",
+        instructions:
+          "Base follow-up questions on the problem type and constraints. Suggest related concepts to study.",
       },
     };
   }
 
   /**
-   * Get category-specific prompt
+   * Build the complete system prompt for a specific feature
    */
-  getCategorySpecificPrompt(category) {
-    const categoryInfo =
-      this.categoryPrompts[category] || this.categoryPrompts["Array"];
+  buildFeaturePrompt(featureId, context) {
+    const feature = this.featurePrompts[featureId];
+    if (!feature) {
+      throw new Error(`Unknown feature: ${featureId}`);
+    }
 
-    return `### 5. SPECIFIC GUIDANCE FOR THIS PROBLEM
+    const problemContext = this.formatProblemContext(context.problem);
+    const sessionContext = this.formatSessionContext(context);
 
-**Problem Type**: ${category}
-**Common Approaches**: ${categoryInfo.approaches}
-**Key Concepts**: ${categoryInfo.keyConcepts}
-**Common Pitfalls**: ${categoryInfo.commonPitfalls}
-**Related Problems**: ${categoryInfo.relatedProblems}
+    return `${this.basePrompt}
 
-### 6. CONVERSATION FLOW
+${feature.title}
+${feature.focus}
 
-**Start with**: Understanding their current knowledge level
-**Build up**: From brute force to optimized solutions
-**Test thoroughly**: Edge cases and boundary conditions
-**End with**: Constructive feedback and next steps`;
+${feature.instructions}
+
+PROBLEM CONTEXT:
+${problemContext}
+
+SESSION CONTEXT:
+${sessionContext}
+
+RESPONSE FORMAT:
+1. Brief explanation (1-2 sentences)
+2. Specific to this problem
+3. Clear next step or question
+
+Remember: Only reference information explicitly provided above.`;
   }
 
   /**
-   * Get phase-specific instructions
+   * Format problem context for the prompt
    */
-  getPhaseInstructions(phase) {
-    return (
-      this.phasePrompts[phase] ||
-      "Continue guiding the candidate through the current phase."
-    );
+  formatProblemContext(problem) {
+    let context = `- Title: ${problem.title || "Unknown"}
+- Difficulty: ${problem.difficulty || "Unknown"}
+- Problem Statement: ${problem.problemStatement || "Not provided"}`;
+
+    if (problem.constraints && problem.constraints.length > 0) {
+      context += `\n- Constraints: ${problem.constraints.join(", ")}`;
+    }
+
+    if (problem.examples && problem.examples.length > 0) {
+      context += `\n- Examples: ${problem.examples.length} provided`;
+    }
+
+    if (problem.category) {
+      context += `\n- Category: ${problem.category}`;
+    }
+
+    return context;
   }
 
   /**
-   * Get hint for specific phase and category
+   * Format session context for the prompt
    */
-  getHint(phase, category, hintLevel) {
-    const hints = {
-      problem_understanding: [
-        "Try to restate the problem in your own words",
-        "What are the input and output constraints?",
-        "Can you identify any edge cases?",
-      ],
-      approach_discussion: [
-        "What would be the simplest approach?",
-        "How can we improve the time complexity?",
-        "What data structure might help here?",
-      ],
-      implementation: [
-        "Start with the basic structure",
-        "How can we make this more readable?",
-        "What edge cases should we handle?",
-      ],
-      testing_optimization: [
-        "What test cases should we consider?",
-        "How can we analyze the complexity?",
-        "Are there any optimizations possible?",
-      ],
-    };
+  formatSessionContext(context) {
+    let sessionInfo = `- Topics Explored: ${
+      context.explored.length > 0 ? context.explored.join(", ") : "None"
+    }`;
 
-    const phaseHints = hints[phase] || hints["problem_understanding"];
-    return (
-      phaseHints[Math.min(hintLevel - 1, phaseHints.length - 1)] ||
-      "Think about the next logical step."
-    );
+    if (context.currentFocus) {
+      sessionInfo += `\n- Current Focus: ${context.currentFocus}`;
+    }
+
+    if (context.sessionDuration > 0) {
+      sessionInfo += `\n- Session Duration: ${context.sessionDuration} minutes`;
+    }
+
+    if (context.userCode && context.userCode.length > 0) {
+      sessionInfo += `\n- User Code: ${context.userCode.length} characters`;
+    }
+
+    return sessionInfo;
+  }
+
+  /**
+   * Get a welcome message for starting Guide Me
+   */
+  getWelcomeMessage(problemInfo) {
+    return `🎯 **Guide Me Mode Activated!**
+
+I'm here to help you understand **${problemInfo.title}** (${problemInfo.difficulty}).
+
+Choose what you'd like to explore:
+
+🧠 **Understand the approach** - Learn the core reasoning and data structure choices
+⚠️ **Handle edge cases** - Identify problem-specific edge cases and handling strategies  
+📊 **Analyze complexity** - Understand time/space complexity requirements
+🔗 **Prepare for follow-ups** - Get ready for interview follow-up questions
+
+What would you like to start with?`;
+  }
+
+  /**
+   * Get a completion message when all features are explored
+   */
+  getCompletionMessage(sessionSummary) {
+    return `🎉 **Guide Me Session Complete!**
+
+Great work! You've explored all aspects of **${sessionSummary.title}**.
+
+**Session Summary:**
+• Topics explored: ${sessionSummary.topicsExplored}/4
+• Session duration: ${sessionSummary.sessionDuration} minutes
+• Problem difficulty: ${sessionSummary.difficulty}
+
+**Next Steps:**
+📚 Check the **Resources** section for additional learning materials
+💻 Try implementing a solution to practice what you've learned
+🔄 Start a new Guide Me session with another problem
+
+Keep practicing and good luck with your interviews! 🚀`;
+  }
+
+  /**
+   * Get a feature exploration message
+   */
+  getFeatureExplorationMessage(featureId, context) {
+    const feature = this.featurePrompts[featureId];
+    const problemTitle = context.problem.title || "this problem";
+
+    return `🔍 **Exploring: ${feature.title}**
+
+Let me help you understand ${feature.focus.toLowerCase()} for **${problemTitle}**.
+
+${feature.instructions}
+
+Let me analyze the problem and provide focused guidance...`;
+  }
+
+  /**
+   * Get a follow-up question prompt
+   */
+  getFollowUpPrompt(featureId, context) {
+    const availableFeatures =
+      context.explored.length < 4
+        ? context.explored.filter((f) => f !== featureId)
+        : [];
+
+    if (availableFeatures.length === 0) {
+      return `Would you like me to help you with anything else about this problem, or are you ready to check the Resources section?`;
+    }
+
+    const nextFeature = availableFeatures[0];
+    const feature = this.featurePrompts[nextFeature];
+
+    return `Great! Now that we've covered ${this.featurePrompts[
+      featureId
+    ].title.toLowerCase()}, would you like to explore **${feature.title.toLowerCase()}** next?`;
+  }
+
+  /**
+   * Build conversation prompt for ongoing discussions
+   */
+  buildConversationPrompt(featureId, context) {
+    const feature = this.featurePrompts[featureId];
+    if (!feature) {
+      throw new Error(`Unknown feature: ${featureId}`);
+    }
+
+    const problemContext = this.formatProblemContext(context.problem);
+    const sessionContext = this.formatSessionContext(context);
+
+    return `${this.basePrompt}
+
+CONTINUING CONVERSATION ABOUT: ${feature.title}
+${feature.focus}
+
+${feature.instructions}
+
+PROBLEM CONTEXT:
+${problemContext}
+
+SESSION CONTEXT:
+${sessionContext}
+
+CONVERSATION INSTRUCTIONS:
+- Continue the discussion about this specific topic
+- Answer questions, provide clarifications, and give examples
+- Keep responses focused and relevant to the current topic
+- Encourage the user to think through concepts
+- When the user seems ready, suggest moving to the next topic
+
+Remember: Only reference information explicitly provided above. Keep responses concise and helpful.`;
   }
 }
 

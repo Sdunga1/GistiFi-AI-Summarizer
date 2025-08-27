@@ -907,3 +907,95 @@ body.leetcode-theme {
     padding: 12px 16px;
   }
 }
+
+/* Guide Me feature buttons styling */
+.guide-me-features {
+  margin: 15px 0;
+}
+
+.guide-me-feature-btn {
+  padding: 12px 16px !important;
+  border: 2px solid #007bff !important;
+  border-radius: 10px !important;
+  background: #007bff !important;
+  color: white !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+  text-align: left !important;
+  margin-bottom: 8px !important;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2) !important;
+}
+
+.guide-me-feature-btn:hover {
+  background: #0056b3 !important;
+  border-color: #0056b3 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3) !important;
+}
+
+.guide-me-feature-btn:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2) !important;
+}
+
+/* Guide Me session status indicator */
+.guide-me-status {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.guide-me-status .status-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.guide-me-status .status-progress {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  height: 6px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.guide-me-status .status-progress-bar {
+  background: #4ade80;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Settings button styling */
+.settings-button-container {
+  display: flex;
+  justify-content: center;
+  margin: 15px 0;
+}
+
+.settings-btn {
+  padding: 12px 24px !important;
+  border: 2px solid #007bff !important;
+  border-radius: 8px !important;
+  background: #007bff !important;
+  color: white !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.settings-btn:hover {
+  background: #0056b3 !important;
+  border-color: #0056b3 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3) !important;
+}
+
+.settings-btn:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2) !important;
+}
