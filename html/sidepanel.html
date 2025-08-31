@@ -16,6 +16,12 @@
           <h1>GistiFi AI</h1>
           <span class="status-indicator">● Online</span>
         </div>
+
+        <!-- Dynamic Mode Indicator -->
+        <div class="mode-indicator" id="mode-indicator">
+          <span class="mode-text">Regular Mode</span>
+        </div>
+
         <div class="header-actions">
           <button id="settings-btn" class="icon-btn" title="Settings">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -119,57 +125,106 @@
         </button>
 
         <!-- LeetCode Mode Buttons (initially hidden) -->
-        <button
-          class="quick-action-btn"
-          data-action="guide-me"
+        <!-- Expandable Guide Me Button -->
+        <div
+          class="guide-me-expandable"
+          id="guide-me-expandable"
           style="display: none"
         >
-          <svg
-            class="guide-icon"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <button
+            class="quick-action-btn guide-me-trigger"
+            data-action="guide-me-trigger"
           >
-            <rect
-              class="grid-box"
-              width="7"
-              height="7"
-              x="3"
-              y="3"
-              rx="1"
-            ></rect>
-            <rect
-              class="grid-box"
-              width="7"
-              height="7"
-              x="14"
-              y="3"
-              rx="1"
-            ></rect>
-            <rect
-              class="grid-box"
-              width="7"
-              height="7"
-              x="14"
-              y="14"
-              rx="1"
-            ></rect>
-            <rect
-              class="grid-box"
-              width="7"
-              height="7"
-              x="3"
-              y="14"
-              rx="1"
-            ></rect>
-          </svg>
-          Guide Me
-        </button>
+            <svg
+              class="guide-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect
+                class="grid-box"
+                width="7"
+                height="7"
+                x="3"
+                y="3"
+                rx="1"
+              ></rect>
+              <rect
+                class="grid-box"
+                width="7"
+                height="7"
+                x="14"
+                y="3"
+                rx="1"
+              ></rect>
+              <rect
+                class="grid-box"
+                width="7"
+                height="7"
+                x="14"
+                y="14"
+                rx="1"
+              ></rect>
+              <rect
+                class="grid-box"
+                width="7"
+                height="7"
+                x="3"
+                y="14"
+                rx="1"
+              ></rect>
+            </svg>
+            Guide Me
+          </button>
+
+          <!-- Expandable Options Panel -->
+          <div class="guide-me-options" id="guide-me-options">
+            <div class="guide-me-option" data-feature="intuition">
+              <div class="option-icon">🧠</div>
+              <div class="option-content">
+                <div class="option-title">Understand the approach</div>
+                <div class="option-description">
+                  Learn the core reasoning and data structure choices
+                </div>
+              </div>
+            </div>
+
+            <div class="guide-me-option" data-feature="edgeCases">
+              <div class="option-icon">⚠️</div>
+              <div class="option-content">
+                <div class="option-title">Handle edge cases</div>
+                <div class="option-description">
+                  Identify problem-specific edge cases and handling strategies
+                </div>
+              </div>
+            </div>
+
+            <div class="guide-me-option" data-feature="complexity">
+              <div class="option-icon">📊</div>
+              <div class="option-content">
+                <div class="option-title">Analyze complexity</div>
+                <div class="option-description">
+                  Understand time/space complexity requirements
+                </div>
+              </div>
+            </div>
+
+            <div class="guide-me-option" data-feature="followUps">
+              <div class="option-icon">🔗</div>
+              <div class="option-content">
+                <div class="option-title">Prepare for follow-ups</div>
+                <div class="option-description">
+                  Get ready for interview follow-up questions
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <button
           class="quick-action-btn"
           data-action="resources"
@@ -185,6 +240,15 @@
           style="display: none"
         >
           🔍 Debug Extract
+        </button>
+
+        <!-- Debug button for testing YouTube service -->
+        <button
+          class="quick-action-btn debug-btn"
+          data-action="debug-youtube"
+          style="display: none"
+        >
+          🎥 Debug YouTube
         </button>
       </div>
     </main>
@@ -292,6 +356,7 @@
     <!-- Load modules first -->
     <script src="../scripts/guideMePrompts.js"></script>
     <script src="../scripts/guideMeSession.js"></script>
+    <script src="../scripts/youtubeService.js"></script>
 
     <!-- Load main script last -->
     <script src="../scripts/sidepanel.js"></script>

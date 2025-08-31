@@ -216,6 +216,12 @@ function setupMessageListener() {
           sendResponse({ success: true });
           return true;
         }
+
+        if (req.type === "GET_LEETCODE_LANGUAGE") {
+          const language = this.extractLeetCodeLanguage();
+          sendResponse({ language: language });
+          return true;
+        }
       } catch (error) {
         console.log("Error handling message:", error);
         sendResponse({ success: false, error: error.message });
@@ -815,6 +821,79 @@ class LeetCodeProblemExtractor {
   getProblemId() {
     const match = window.location.pathname.match(/\/problems\/([^\/]+)/);
     return match ? match[1] : null;
+  }
+
+  /**
+   * Extract the currently selected programming language from LeetCode UI
+   */
+  extractLeetCodeLanguage() {
+    try {
+      // Look for language selector in the editor area
+      const languageSelectors = [
+        // Common language selector patterns
+        'select[data-cy="language-selector"] option[selected]',
+        'select[data-testid="language-selector"] option[selected]',
+        'select[class*="language"] option[selected]',
+        // Look for language display elements
+        '[data-cy="language-display"]',
+        '[data-testid="language-display"]',
+        ".language-display",
+        // Look for language in code editor headers
+        ".editor-header .language",
+        ".code-editor-header .language",
+        // Fallback: look for any element containing language names
+        '[class*="language"]',
+        "[data-language]",
+      ];
+
+      for (const selector of languageSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          const text =
+            element.textContent || element.getAttribute("data-language") || "";
+          const language = this.normalizeLanguage(text);
+          if (language) {
+            console.log("Found LeetCode language:", language);
+            return language;
+          }
+        }
+      }
+
+      // If no language found, return empty string
+      console.log("No LeetCode language detected");
+      return "";
+    } catch (error) {
+      console.error("Error extracting LeetCode language:", error);
+      return "";
+    }
+  }
+
+  /**
+   * Normalize language names to standard format
+   */
+  normalizeLanguage(languageText) {
+    if (!languageText) return "";
+
+    const normalized = languageText.toLowerCase().trim();
+
+    // Map common variations to standard names
+    if (normalized.includes("cpp") || normalized.includes("c++")) return "C++";
+    if (normalized.includes("python") || normalized.includes("py"))
+      return "Python";
+    if (normalized.includes("java")) return "Java";
+    if (normalized.includes("javascript") || normalized.includes("js"))
+      return "JavaScript";
+    if (normalized.includes("typescript") || normalized.includes("ts"))
+      return "TypeScript";
+    if (normalized.includes("go")) return "Go";
+    if (normalized.includes("rust")) return "Rust";
+    if (normalized.includes("kotlin")) return "Kotlin";
+    if (normalized.includes("swift")) return "Swift";
+    if (normalized.includes("php")) return "PHP";
+    if (normalized.includes("ruby")) return "Ruby";
+    if (normalized.includes("scala")) return "Scala";
+
+    return "";
   }
 }
 

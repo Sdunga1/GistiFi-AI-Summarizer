@@ -9,6 +9,7 @@ class GistiFiChat {
     };
     this.isProcessing = false;
     this.currentTabId = null;
+    this.youtubeService = null;
 
     this.init();
   }
@@ -21,6 +22,7 @@ class GistiFiChat {
     this.setupCharCounter();
     this.setupCloseDetection();
     this.checkLeetCodeMode();
+    await this.initializeYouTubeService();
 
     // Set initial button state based on current mode
     this.toggleActionButtons(this.isLeetCodeModeActive());
@@ -73,7 +75,6 @@ class GistiFiChat {
   }
 
   toggleActionButtons(isLeetCodeMode) {
-    const guideMeBtn = document.querySelector('[data-action="guide-me"]');
     const resourcesBtn = document.querySelector('[data-action="resources"]');
     const debugBtn = document.querySelector('[data-action="debug-extract"]');
     const summarizeBtn = document.querySelector('[data-action="summarize"]');
@@ -83,7 +84,6 @@ class GistiFiChat {
 
     if (isLeetCodeMode) {
       // Show LeetCode-specific buttons
-      if (guideMeBtn) guideMeBtn.style.display = "inline-flex";
       if (resourcesBtn) resourcesBtn.style.display = "inline-flex";
       if (debugBtn) debugBtn.style.display = "inline-flex";
       // Hide regular mode buttons
@@ -94,16 +94,21 @@ class GistiFiChat {
       if (summarizeBtn) summarizeBtn.style.display = "inline-flex";
       if (askQuestionBtn) askQuestionBtn.style.display = "inline-flex";
       // Hide LeetCode-specific buttons
-      if (guideMeBtn) guideMeBtn.style.display = "none";
       if (resourcesBtn) resourcesBtn.style.display = "none";
       if (debugBtn) debugBtn.style.display = "none";
     }
+
+    // Toggle expandable Guide Me interface
+    this.toggleGuideMeInterface(isLeetCodeMode);
 
     // Toggle welcome messages
     this.toggleWelcomeMessages(isLeetCodeMode);
 
     // Update placeholder text
     this.updatePlaceholderText(isLeetCodeMode);
+
+    // Update mode indicator
+    this.updateModeIndicator(isLeetCodeMode);
   }
 
   toggleWelcomeMessages(isLeetCodeMode) {
@@ -128,6 +133,104 @@ class GistiFiChat {
       } else {
         chatInput.placeholder = "Type your message or paste code here...";
       }
+    }
+  }
+
+  toggleGuideMeInterface(isLeetCodeMode) {
+    const guideMeExpandable = document.getElementById("guide-me-expandable");
+    if (guideMeExpandable) {
+      guideMeExpandable.style.display = isLeetCodeMode
+        ? "inline-block"
+        : "none";
+    }
+  }
+
+  updateModeIndicator(isLeetCodeMode, currentTopic = null) {
+    const modeIndicator = document.getElementById("mode-indicator");
+    if (modeIndicator) {
+      const modeText = modeIndicator.querySelector(".mode-text");
+      if (modeText) {
+        if (isLeetCodeMode) {
+          modeIndicator.classList.add("leetcode-mode");
+          if (currentTopic) {
+            // Show current Guide Me topic
+            modeText.textContent = currentTopic;
+          } else {
+            modeText.textContent = "LeetCode Mode";
+          }
+        } else {
+          modeIndicator.classList.remove("leetcode-mode");
+          modeText.textContent = "Regular Mode";
+        }
+      }
+    }
+  }
+
+  setupGuideMeExpandable() {
+    const guideMeTrigger = document.querySelector(".guide-me-trigger");
+    const guideMeOptions = document.getElementById("guide-me-options");
+
+    if (guideMeTrigger && guideMeOptions) {
+      // Toggle expandable options when trigger is clicked
+      guideMeTrigger.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isExpanded = guideMeOptions.classList.contains("expanded");
+
+        if (isExpanded) {
+          guideMeOptions.classList.remove("expanded");
+        } else {
+          guideMeOptions.classList.add("expanded");
+        }
+      });
+
+      // Handle option selection
+      const options = guideMeOptions.querySelectorAll(".guide-me-option");
+      options.forEach((option) => {
+        option.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const featureId = option.getAttribute("data-feature");
+          if (featureId) {
+            // Close the options panel
+            guideMeOptions.classList.remove("expanded");
+
+            // Start Guide Me mode with selected feature
+            this.startGuideMeWithFeature(featureId);
+          }
+        });
+      });
+
+      // Close options when clicking outside
+      document.addEventListener("click", (e) => {
+        if (
+          !guideMeTrigger.contains(e.target) &&
+          !guideMeOptions.contains(e.target)
+        ) {
+          guideMeOptions.classList.remove("expanded");
+        }
+      });
+    }
+  }
+
+  async startGuideMeWithFeature(featureId) {
+    try {
+      // Start Guide Me mode
+      await this.promptGuideMe();
+
+      // Directly explore the selected feature
+      if (this.guideMeSession && this.guideMePrompts) {
+        await this.exploreFeature(featureId);
+      }
+    } catch (error) {
+      console.error("Error starting Guide Me with feature:", error);
+      this.addMessage(
+        "❌ Error starting Guide Me mode. Please try again.",
+        "bot",
+        "error"
+      );
     }
   }
 
@@ -373,6 +476,9 @@ class GistiFiChat {
       guideMeBtn.addEventListener("click", this.animateGuideIcon.bind(this));
     }
 
+    // Setup expandable Guide Me interface
+    this.setupGuideMeExpandable();
+
     // Header buttons
     document
       .getElementById("settings-btn")
@@ -496,6 +602,10 @@ class GistiFiChat {
           await this.activateLeetCodeMode();
         }
         break;
+      case "guide-me-trigger":
+        // Reset dynamic island to show LeetCode Mode when Guide Me is clicked
+        this.updateModeIndicator(true);
+        break;
     }
   }
 
@@ -582,14 +692,7 @@ class GistiFiChat {
         return;
       }
 
-      // Check if user wants to move to next topic
-      if (
-        message.toLowerCase().includes("next") ||
-        message.toLowerCase().includes("move on")
-      ) {
-        this.moveToNextTopic();
-        return;
-      }
+      // Users can select topics directly from Guide Me button - no need for "next" commands
 
       // Check if user wants to end session
       if (
@@ -692,6 +795,9 @@ class GistiFiChat {
 
   async summarizePage() {
     try {
+      // Update dynamic island to show current action
+      this.updateModeIndicator(false, "Summarize Page");
+
       // Get page content
       const [tab] = await chrome.tabs.query({
         active: true,
@@ -742,6 +848,9 @@ class GistiFiChat {
   }
 
   promptQuestion() {
+    // Update dynamic island to show current action
+    this.updateModeIndicator(false, "Ask Question");
+
     const chatInput = document.getElementById("chat-input");
     chatInput.value = "Ask me anything about this page...";
     chatInput.focus();
@@ -883,6 +992,11 @@ ${code}`,
   }
 
   formatMessage(content, type) {
+    if (type === "html") {
+      // Return HTML content directly without processing
+      return content;
+    }
+
     if (type === "code") {
       // If content looks like code analysis, format it nicely
       if (
@@ -901,6 +1015,9 @@ ${code}`,
   }
 
   promptCodeAnalysis() {
+    // Update dynamic island to show current action
+    this.updateModeIndicator(true, "Analyze Code");
+
     const chatInput = document.getElementById("chat-input");
     chatInput.value = "Paste your code here for analysis...";
     chatInput.focus();
@@ -1229,21 +1346,8 @@ ${code}`,
       );
       this.guideMeSession.startSession();
 
-      // Show welcome message with feature selection
-      this.addMessage(
-        `🎯 **Guide Me Mode Activated!**\n\n` +
-          `I'm here to help you understand **${problemInfo.title}** (${problemInfo.difficulty}).\n\n` +
-          `Choose what you'd like to explore:\n\n` +
-          `🧠 **Understand the approach** - Learn the core reasoning and data structure choices\n` +
-          `⚠️ **Handle edge cases** - Identify problem-specific edge cases and handling strategies\n` +
-          `📊 **Analyze complexity** - Understand time/space complexity requirements\n` +
-          `🔗 **Prepare for follow-ups** - Get ready for interview follow-up questions\n\n` +
-          `What would you like to start with?`,
-        "bot"
-      );
-
-      // Show feature selection buttons
-      this.showGuideMeFeatures();
+      // No welcome message needed - user already selected a topic
+      // The dynamic island will show the current mode
     } catch (error) {
       console.error("Error starting Guide Me:", error);
       this.addMessage(
@@ -1343,30 +1447,347 @@ ${code}`,
     }
   }
 
-  showResources() {
-    this.addMessage(
-      `📚 **Resources & Learning Materials**\n\n` +
-        `Here are some helpful resources to enhance your problem-solving skills:\n\n` +
-        `🔗 **LeetCode Resources:**\n` +
-        `• [LeetCode Explore Cards](https://leetcode.com/explore/)\n` +
-        `• [LeetCode Discuss](https://leetcode.com/discuss/)\n` +
-        `• [LeetCode Solutions](https://leetcode.com/problemset/all/)\n\n` +
-        `📖 **Learning Materials:**\n` +
-        `• [GeeksforGeeks](https://www.geeksforgeeks.org/)\n` +
-        `• [HackerRank](https://www.hackerrank.com/)\n` +
-        `• [InterviewBit](https://www.interviewbit.com/)\n\n` +
-        `📚 **Books & Courses:**\n` +
-        `• "Cracking the Coding Interview" by Gayle McDowell\n` +
-        `• "Introduction to Algorithms" (CLRS)\n` +
-        `• [AlgoExpert](https://www.algoexpert.io/)\n\n` +
-        `💡 **Practice Tips:**\n` +
-        `• Start with Easy problems and gradually increase difficulty\n` +
-        `• Focus on understanding patterns rather than memorizing solutions\n` +
-        `• Practice explaining your solutions out loud\n` +
-        `• Review and optimize your solutions\n\n` +
-        `Happy learning! 🚀`,
-      "bot"
+  async showResources() {
+    // Update dynamic island to show current action
+    this.updateModeIndicator(true, "Resources");
+
+    // Check if we're on a LeetCode problem page
+    const currentTab = await this.getCurrentTab();
+    const isProblemPage =
+      currentTab && currentTab.url && currentTab.url.includes("/problems/");
+
+    if (!isProblemPage) {
+      this.addMessage(
+        `⚠️ **Not a LeetCode Problem Page**\n\n` +
+          `To access problem-specific resources (including YouTube videos), please navigate to a LeetCode problem page.\n\n` +
+          `**Current page:** ${currentTab?.url || "Unknown"}\n\n` +
+          `**Required format:** \`https://leetcode.com/problems/[problem-name]/\`\n\n` +
+          `Please go to a LeetCode problem page and try again! 📚`,
+        "bot"
+      );
+      return;
+    }
+
+    // Extract base problem URL (remove /description/ or other suffixes)
+    const problemMatch = currentTab.url.match(
+      /leetcode\.com\/problems\/([^\/]+)/
     );
+    if (!problemMatch) {
+      this.addMessage(
+        `❌ **Invalid LeetCode URL**\n\n` +
+          `Could not extract problem name from URL.\n\n` +
+          `**Current page:** ${currentTab?.url || "Unknown"}`,
+        "bot"
+      );
+      return;
+    }
+
+    // Use the base problem URL for all operations
+    const problemName = problemMatch[1];
+    const baseProblemUrl = `https://leetcode.com/problems/${problemName}/`;
+
+    // Start with basic resources message
+    let resourcesMessage = `
+      <div style="margin-bottom: 24px; text-align: center;">
+        <h2 style="color: #ffffff; font-size: 24px; margin-bottom: 12px; font-weight: 600;">
+          📚 Resources & Learning Materials
+        </h2>
+        <p style="color: #cccccc; font-size: 16px; line-height: 1.5;">
+          I've gathered some helpful resources for "${problemName
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase())}".<br>
+          These include video explanations, related problems, and learning materials to deepen your understanding.
+        </p>
+      </div>
+    `;
+
+    // Try to get YouTube videos if available
+    let youtubeVideos = [];
+    console.log("YouTube service status:", this.youtubeService?.getStatus());
+
+    if (this.youtubeService && this.youtubeService.isAvailable()) {
+      console.log("YouTube service is available, searching for videos...");
+      try {
+        // Try to get problem info from Guide Me session or current page
+        let problemTitle = "LeetCode Problem";
+        let difficulty = "";
+
+        if (this.guideMeSession && this.guideMeSession.problemInfo) {
+          problemTitle = this.guideMeSession.problemInfo.title;
+          difficulty = this.guideMeSession.problemInfo.difficulty;
+          console.log("Using Guide Me session info:", {
+            problemTitle,
+            difficulty,
+          });
+        } else {
+          // Extract from current page
+          // Use the already extracted problem name
+          problemTitle = problemName
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase());
+          console.log("Using problem title:", problemTitle);
+        }
+
+        // Try to get programming language from LeetCode UI
+        let programmingLanguage = "";
+        try {
+          programmingLanguage = await this.getLeetCodeProgrammingLanguage();
+          console.log("Detected programming language:", programmingLanguage);
+        } catch (error) {
+          console.log("Could not detect programming language:", error);
+        }
+
+        console.log("Searching YouTube with:", {
+          problemTitle,
+          difficulty,
+          programmingLanguage,
+        });
+        youtubeVideos = await this.youtubeService.searchLeetCodeVideos(
+          problemTitle,
+          difficulty,
+          programmingLanguage,
+          true // We've already validated it's a problem page
+        );
+        console.log("YouTube search results:", youtubeVideos);
+      } catch (error) {
+        console.log("YouTube videos unavailable:", error);
+      }
+    } else {
+      console.log(
+        "YouTube service not available. Status:",
+        this.youtubeService?.getStatus()
+      );
+    }
+
+    // Add YouTube videos if available
+    if (youtubeVideos.length > 0) {
+      console.log("Adding YouTube videos to resources:", youtubeVideos.length);
+      resourcesMessage += `
+        <div style="margin-bottom: 16px;">
+          <h3 style="color: #ffffff; font-size: 20px; margin-bottom: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 24px;">🎥</span> Video Solutions
+          </h3>
+          <p style="color: #cccccc; font-size: 14px; margin-bottom: 16px;">
+            Watch detailed explanations and step-by-step solutions from top educators:
+          </p>
+        </div>
+      `;
+
+      // Create HTML content for videos to embed in chat
+      let videosHTML = "";
+      youtubeVideos.forEach((video, index) => {
+        videosHTML += `
+            <a href="${
+              video.url
+            }" target="_blank" style="text-decoration: none; display: block;">
+              <div class="youtube-video-card" style="margin: 12px 0; padding: 16px; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 1px solid #404040; border-radius: 12px; display: flex; gap: 16px; align-items: flex-start; transition: all 0.3s ease; cursor: pointer;">
+                <div style="position: relative; width: 160px; height: 90px; flex-shrink: 0; overflow: hidden; border-radius: 8px;">
+                  <img src="${video.thumbnail}" alt="${
+          video.title
+        }" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
+                  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 60, 60, 0.9); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; opacity: 0.9; transition: opacity 0.3s ease;">▶️</div>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <h4 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #ffffff; line-height: 1.4;">${
+                    video.title
+                  }</h4>
+                  <p style="margin: 0 0 12px 0; font-size: 14px; color: #cccccc; font-weight: 500;">📺 ${
+                    video.channelTitle
+                  }</p>
+                  <div style="display: flex; gap: 16px; margin-bottom: 16px; font-size: 12px; color: #888888;">
+                    <span>👁️ ${this.formatNumber(video.viewCount)}</span>
+                    <span>👍 ${this.formatNumber(video.likeCount)}</span>
+                    <span>📅 ${video.duration}</span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          `;
+      });
+
+      // Add the videos HTML to the message
+      resourcesMessage += videosHTML;
+    } else if (this.youtubeService && !this.youtubeService.isAvailable()) {
+      console.log("YouTube service not available, showing API key message");
+      resourcesMessage += `
+        <div style="margin-bottom: 24px; padding: 16px; background: rgba(255,255,255,0.1); border-radius: 12px; text-align: center;">
+          <h3 style="color: #ffffff; font-size: 20px; margin-bottom: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span style="font-size: 24px;">🎥</span> Video Solutions
+          </h3>
+          <p style="color: #cccccc; font-size: 14px; line-height: 1.5;">
+            To see video solutions, please add your YouTube API key in settings.<br>
+            This will enable personalized video recommendations for each problem.
+          </p>
+          <button onclick="document.getElementById('settings-btn').click()" style="margin-top: 12px; background: linear-gradient(135deg, #ff3c3c 0%, #d62828 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
+            Configure YouTube API
+          </button>
+        </div>
+      `;
+    } else if (
+      youtubeVideos.length === 0 &&
+      this.youtubeService &&
+      this.youtubeService.isAvailable()
+    ) {
+      console.log("YouTube service available but no videos found");
+      resourcesMessage += `
+        <div style="margin-bottom: 24px; padding: 16px; background: rgba(255,255,255,0.1); border-radius: 12px; text-align: center;">
+          <h3 style="color: #ffffff; font-size: 20px; margin-bottom: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span style="font-size: 24px;">🎥</span> Video Solutions
+          </h3>
+          <p style="color: #cccccc; font-size: 14px; line-height: 1.5;">
+            No video solutions found for this problem at the moment.<br>
+            Try checking back later or explore the other learning resources below.
+          </p>
+        </div>
+      `;
+    }
+
+    // Add other resources with modern UI
+    resourcesMessage += `
+      <div style="margin-top: 24px;">
+        <div style="background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+          <h3 style="margin: 0 0 12px 0; color: white; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">🔗</span> LeetCode Resources
+          </h3>
+          <div style="display: grid; gap: 8px;">
+            <a href="https://leetcode.com/explore/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">📘</span> LeetCode Explore Cards
+            </a>
+            <a href="https://leetcode.com/discuss/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">💬</span> LeetCode Discuss
+            </a>
+            <a href="https://leetcode.com/problemset/all/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">📝</span> LeetCode Solutions
+            </a>
+          </div>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+          <h3 style="margin: 0 0 12px 0; color: white; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">📖</span> Learning Materials
+          </h3>
+          <div style="display: grid; gap: 8px;">
+            <a href="https://www.geeksforgeeks.org/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">🌟</span> GeeksforGeeks
+            </a>
+            <a href="https://www.hackerrank.com/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">💻</span> HackerRank
+            </a>
+            <a href="https://www.algoexpert.io/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">🧠</span> AlgoExpert
+            </a>
+          </div>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+          <h3 style="margin: 0 0 12px 0; color: white; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">📚</span> Books & Courses
+          </h3>
+          <div style="display: grid; gap: 8px;">
+            <div style="color: white; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">📗</span> "Cracking the Coding Interview" by Gayle McDowell
+            </div>
+            <div style="color: white; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">📘</span> "Introduction to Algorithms" (CLRS)
+            </div>
+            <a href="https://leetcode.com/subscribe/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">⭐</span> LeetCode Premium
+            </a>
+          </div>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+          <h3 style="margin: 0 0 12px 0; color: white; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">💡</span> Practice Tips
+          </h3>
+          <div style="display: grid; gap: 8px; color: white;">
+            <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+              • Start with Easy problems and gradually increase difficulty
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+              • Focus on understanding patterns rather than memorizing solutions
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+              • Practice explaining your solutions out loud
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+              • Review and optimize your solutions
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 24px; font-size: 16px;">Happy learning! 🚀</div>
+    `;
+
+    this.addMessage(resourcesMessage, "bot", "html");
+  }
+
+  /**
+   * Get the currently selected programming language from LeetCode UI
+   */
+  async getLeetCodeProgrammingLanguage() {
+    try {
+      // Send message to content script to get the current language
+      const response = await chrome.tabs.sendMessage(this.currentTabId, {
+        type: "GET_LEETCODE_LANGUAGE",
+      });
+
+      if (response && response.language) {
+        return response.language;
+      }
+
+      return "";
+    } catch (error) {
+      console.log("Error getting LeetCode language:", error);
+      return "";
+    }
+  }
+
+  /**
+   * Initialize YouTube service
+   */
+  async initializeYouTubeService() {
+    try {
+      console.log("Initializing YouTube service...");
+      console.log(
+        "YouTubeService available:",
+        typeof YouTubeService !== "undefined"
+      );
+
+      if (typeof YouTubeService !== "undefined") {
+        this.youtubeService = new YouTubeService();
+        console.log("YouTubeService instance created");
+
+        const initialized = await this.youtubeService.initialize();
+        console.log("YouTube service initialization result:", initialized);
+
+        const status = this.youtubeService.getStatus();
+        console.log("YouTube service status:", status);
+
+        if (initialized) {
+          console.log("✅ YouTube service initialized successfully");
+        } else {
+          console.log("❌ YouTube service initialization failed");
+        }
+      } else {
+        console.log("❌ YouTubeService class not found");
+      }
+    } catch (error) {
+      console.error("Error initializing YouTube service:", error);
+    }
+  }
+
+  /**
+   * Format large numbers for display
+   */
+  formatNumber(num) {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + "M";
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + "K";
+    }
+    return num.toString();
   }
 
   /**
@@ -1385,12 +1806,14 @@ ${code}`,
       return;
     }
 
-    // Create feature selection message
-    let message = `**Choose a topic to explore:**\n\n`;
+    // Create clean welcome message with feature selection
+    const problemInfo = this.guideMeSession.problemInfo;
+    let message = `**Guide Me Mode** - ${problemInfo.title} (${problemInfo.difficulty})\n\n`;
+    message += `I'm here to help you understand this problem step by step. Choose what you'd like to explore:\n\n`;
 
     availableFeatures.forEach((feature) => {
-      message += `${feature.icon} **${feature.label}**\n`;
-      message += `   ${feature.description}\n\n`;
+      message += `**${feature.label}**\n`;
+      message += `${feature.description}\n\n`;
     });
 
     this.addMessage(message, "bot");
@@ -1406,38 +1829,11 @@ ${code}`,
     // Create a container for the buttons
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "guide-me-features";
-    buttonContainer.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin: 10px 0;
-    `;
 
     features.forEach((feature) => {
       const button = document.createElement("button");
       button.className = "guide-me-feature-btn";
-      button.innerHTML = `${feature.icon} ${feature.label}`;
-      button.style.cssText = `
-        padding: 10px 15px;
-        border: 2px solid #007bff;
-        border-radius: 8px;
-        background: #007bff;
-        color: white;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.2s;
-        text-align: left;
-      `;
-
-      button.addEventListener("mouseenter", () => {
-        button.style.background = "#0056b3";
-        button.style.borderColor = "#0056b3";
-      });
-
-      button.addEventListener("mouseleave", () => {
-        button.style.background = "#007bff";
-        button.style.borderColor = "#007bff";
-      });
+      button.innerHTML = `${feature.label}`;
 
       button.addEventListener("click", () => {
         this.exploreFeature(feature.id);
@@ -1471,12 +1867,15 @@ ${code}`,
       // Set current focus
       this.guideMeSession.setCurrentFocus(featureId);
 
-      // Show exploration message
+      // Update dynamic island to show current topic
       const feature = this.guideMeSession.getFeature(featureId);
+      this.updateModeIndicator(true, feature.label);
+
+      // Show exploration message with integrated conversation prompt
       this.addMessage(
-        `🔍 **Exploring: ${feature.label}**\n\n` +
-          `Let me help you understand this aspect of **${this.guideMeSession.problemInfo.title}**.\n\n` +
-          `Analyzing the problem and providing focused guidance...`,
+        `🔍 **${feature.label}**\n\n` +
+          `Let me help you understand this aspect of **${this.guideMeSession.problemInfo.title}**...\n\n` +
+          `💬 I'm here to help! Ask questions or select another topic from the Guide Me button above.`,
         "bot"
       );
 
@@ -1552,63 +1951,15 @@ ${code}`,
     // Set conversation mode
     this.guideMeSession.setConversationMode(featureId);
 
-    // Add conversation prompt
-    this.addMessage(
-      "💬 **Conversation Mode**: I'm here to guide you through this topic step by step.\n\n" +
-        "Feel free to ask questions, share your thoughts, or ask for clarification. " +
-        "I'll help you understand the concepts thoroughly before we move to the next topic.\n\n" +
-        "💡 **Commands**: Type 'next' to move to the next topic, 'end' to finish the session.",
-      "bot"
-    );
-
-    // Update input placeholder
+    // Update input placeholder to be more focused
     const chatInput = document.getElementById("chat-input");
     if (chatInput) {
       chatInput.placeholder =
-        "Ask questions, share your thoughts, or type 'next' to move to next topic...";
+        "Ask questions or share your thoughts about this topic...";
     }
   }
 
-  /**
-   * Move to next topic in Guide Me session
-   */
-  moveToNextTopic() {
-    if (!this.guideMeSession) return;
-
-    // Check if session should end
-    if (this.guideMeSession.shouldEndSession()) {
-      this.endGuideMeSession();
-      return;
-    }
-
-    // Show available features
-    const availableFeatures = this.guideMeSession.getAvailableFeatures();
-
-    if (availableFeatures.length > 0) {
-      let message = `**Great! Let's move to the next topic. What would you like to explore?**\n\n`;
-
-      availableFeatures.forEach((feature) => {
-        message += `${feature.icon} **${feature.label}**\n`;
-        message += `   ${feature.description}\n\n`;
-      });
-
-      this.addMessage(message, "bot");
-
-      // Add feature selection buttons
-      this.addFeatureSelectionButtons(availableFeatures);
-
-      // Reset conversation mode
-      this.guideMeSession.setConversationMode(null);
-
-      // Reset input placeholder
-      const chatInput = document.getElementById("chat-input");
-      if (chatInput) {
-        chatInput.placeholder = "Type your message...";
-      }
-    } else {
-      this.endGuideMeSession();
-    }
-  }
+  // moveToNextTopic method removed - users can select topics directly from Guide Me button
 
   /**
    * End Guide Me session
@@ -1626,13 +1977,16 @@ ${code}`,
         `**Next Steps:**\n` +
         `📚 Check the **Resources** section for additional learning materials\n` +
         `💻 Try implementing a solution to practice what you've learned\n` +
-        `🔄 Start a new Guide Me session with another problem\n\n` +
+        `🔄 Select another topic from the Guide Me button above\n\n` +
         `Keep practicing and good luck with your interviews! 🚀`,
       "bot"
     );
 
     // Reset conversation mode
     this.guideMeSession.setConversationMode(null);
+
+    // Reset dynamic island to show LeetCode Mode
+    this.updateModeIndicator(true);
 
     // Reset input placeholder
     const chatInput = document.getElementById("chat-input");
@@ -1659,7 +2013,7 @@ ${code}`,
           `**Next Steps:**\n` +
           `📚 Check the **Resources** section for additional learning materials\n` +
           `💻 Try implementing a solution to practice what you've learned\n` +
-          `🔄 Start a new Guide Me session with another problem\n\n` +
+          `🔄 Select another topic from the Guide Me button above\n\n` +
           `Keep practicing and good luck with your interviews! 🚀`,
         "bot"
       );
@@ -1670,7 +2024,7 @@ ${code}`,
     const availableFeatures = this.guideMeSession.getAvailableFeatures();
 
     if (availableFeatures.length > 0) {
-      let message = `**What would you like to explore next?**\n\n`;
+      let message = `**What would you like to explore?**\n\n`;
 
       availableFeatures.forEach((feature) => {
         message += `${feature.icon} **${feature.label}**\n`;

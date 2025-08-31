@@ -20,16 +20,42 @@
 
         <div class="form-group">
           <label for="api-key">Gemini API Key:</label>
-          <input
-            type="text"
-            id="api-key"
-            placeholder="Enter your Gemini API key"
-          />
+          <div class="input-with-toggle">
+            <input
+              type="password"
+              id="api-key"
+              placeholder="Enter your Gemini API key"
+            />
+            <button type="button" class="toggle-password" id="toggle-gemini">
+              <span class="eye-icon">👁️</span>
+            </button>
+          </div>
           <p>
             You can get an API key from
             <a href="https://makersuite.google.com/app/apikey" target="_blank">
               Google AI Studio
             </a>
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="youtube-api-key">YouTube API Key (Optional):</label>
+          <div class="input-with-toggle">
+            <input
+              type="password"
+              id="youtube-api-key"
+              placeholder="Enter your YouTube API key (optional)"
+            />
+            <button type="button" class="toggle-password" id="toggle-youtube">
+              <span class="eye-icon">👁️</span>
+            </button>
+          </div>
+          <p>
+            Get a YouTube API key from
+            <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank">
+              Google Cloud Console
+            </a>
+            for video suggestions. This is optional and won't affect other features.
           </p>
         </div>
 

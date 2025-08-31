@@ -42,7 +42,8 @@ label {
   font-weight: bold;
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
   width: 100%;
   padding: 10px;
   box-sizing: border-box;
@@ -52,8 +53,46 @@ input[type="text"] {
   color: #ffffff;
 }
 
-input[type="text"]::placeholder {
+input[type="text"]::placeholder,
+input[type="password"]::placeholder {
   color: #cccccc;
+}
+
+.input-with-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-toggle input {
+  width: calc(100% - 50px);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.toggle-password {
+  width: 50px;
+  height: 42px;
+  border: 1px solid #aaa;
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  background-color: #1a1a1a;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
+
+.toggle-password:hover {
+  background-color: #333333;
+}
+
+.eye-icon {
+  font-size: 16px;
+  user-select: none;
 }
 
 a {

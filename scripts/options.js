@@ -1,26 +1,61 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const apiInput = document.getElementById("api-key");
+  const geminiInput = document.getElementById("api-key");
+  const youtubeInput = document.getElementById("youtube-api-key");
   const successMsg = document.getElementById("success-message");
   const errorMsg = document.getElementById("error-message");
 
-  chrome.storage.sync.get(["geminiApiKey"], ({ geminiApiKey }) => {
-    if (geminiApiKey) apiInput.value = geminiApiKey;
-  });
+  // Load saved API keys
+  chrome.storage.sync.get(
+    ["geminiApiKey", "youtubeApiKey"],
+    ({ geminiApiKey, youtubeApiKey }) => {
+      if (geminiApiKey) geminiInput.value = geminiApiKey;
+      if (youtubeApiKey) youtubeInput.value = youtubeApiKey;
+    }
+  );
+
+  // Password toggle functionality
+  function setupPasswordToggle(inputId, toggleId) {
+    const input = document.getElementById(inputId);
+    const toggle = document.getElementById(toggleId);
+
+    toggle.addEventListener("click", () => {
+      if (input.type === "password") {
+        input.type = "text";
+        toggle.querySelector(".eye-icon").textContent = "🙈";
+      } else {
+        input.type = "password";
+        toggle.querySelector(".eye-icon").textContent = "👁️";
+      }
+    });
+  }
+
+  // Setup password toggles
+  setupPasswordToggle("api-key", "toggle-gemini");
+  setupPasswordToggle("youtube-api-key", "toggle-youtube");
 
   document.getElementById("save-button").addEventListener("click", () => {
-    const apiKey = apiInput.value.trim();
-    if (!apiKey) {
+    const geminiKey = geminiInput.value.trim();
+    const youtubeKey = youtubeInput.value.trim();
+
+    if (!geminiKey) {
       errorMsg.style.display = "block";
       successMsg.style.display = "none";
       return;
     }
 
-    chrome.storage.sync.set({ geminiApiKey: apiKey }, () => {
-      chrome.action.setPopup({ popup: "../html/reloadPrompt.html" }, () => {
-        successMsg.style.display = "block";
-        errorMsg.style.display = "none";
-        setTimeout(() => window.close(), 1000);
-      });
-    });
+    // Save both API keys (YouTube can be empty)
+    chrome.storage.sync.set(
+      {
+        geminiApiKey: geminiKey,
+        youtubeApiKey: youtubeKey,
+      },
+      () => {
+        chrome.action.setPopup({ popup: "../html/reloadPrompt.html" }, () => {
+          successMsg.style.display = "block";
+          errorMsg.style.display = "none";
+          setTimeout(() => window.close(), 1000);
+        });
+      }
+    );
   });
 });

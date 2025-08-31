@@ -114,26 +114,26 @@ class GuideMeSession {
     const allFeatures = [
       {
         id: "intuition",
-        label: "🧠 Understand the approach",
+        label: "Understand the approach",
         icon: "🧠",
         description: "Learn the core reasoning and data structure choices",
       },
       {
         id: "edgeCases",
-        label: "⚠️ Handle edge cases",
+        label: "Handle edge cases",
         icon: "⚠️",
         description:
           "Identify problem-specific edge cases and handling strategies",
       },
       {
         id: "complexity",
-        label: "📊 Analyze complexity",
+        label: "Analyze complexity",
         icon: "📊",
         description: "Understand time/space complexity requirements",
       },
       {
         id: "followUps",
-        label: "🔗 Prepare for follow-ups",
+        label: "Prepare for follow-ups",
         icon: "🔗",
         description: "Get ready for interview follow-up questions",
       },
@@ -149,10 +149,10 @@ class GuideMeSession {
    */
   getFeature(featureId) {
     const allFeatures = [
-      { id: "intuition", label: "🧠 Understand the approach", icon: "🧠" },
-      { id: "edgeCases", label: "⚠️ Handle edge cases", icon: "⚠️" },
-      { id: "complexity", label: "📊 Analyze complexity", icon: "📊" },
-      { id: "followUps", label: "🔗 Prepare for follow-ups", icon: "🔗" },
+      { id: "intuition", label: "Understand the approach", icon: "🧠" },
+      { id: "edgeCases", label: "Handle edge cases", icon: "⚠️" },
+      { id: "complexity", label: "Analyze complexity", icon: "📊" },
+      { id: "followUps", label: "Prepare for follow-ups", icon: "🔗" },
     ];
 
     return allFeatures.find((f) => f.id === featureId);
