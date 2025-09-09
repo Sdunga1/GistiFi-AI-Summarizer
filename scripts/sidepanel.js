@@ -1081,14 +1081,23 @@ ${code}`,
     let match;
 
     while ((match = regex.exec(text)) !== null) {
-      const before = text
+      let before = text
         .slice(lastIndex, match.index)
         .replace(/\n/g, "<br>")
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
         .replace(/\*(.*?)\*/g, "<em>$1</em>");
-      html += before;
 
       const lang = (match[1] || "code").toLowerCase();
+      // If the previous line is exactly the language label (e.g., "cpp"), drop it
+      const parts = before.split("<br>");
+      if (
+        parts.length &&
+        parts[parts.length - 1].trim().toLowerCase() === lang
+      ) {
+        parts.pop();
+        before = parts.join("<br>");
+      }
+      html += before;
       const rawCode = match[2];
       const codeEscaped = rawCode
         .replace(/&/g, "&amp;")
