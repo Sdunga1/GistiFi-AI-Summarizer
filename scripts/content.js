@@ -30,7 +30,7 @@ function highlightPageContent() {
 }
 
 // Create and inject floating action button
-function createFloatingButton() {
+async function createFloatingButton() {
   // Check if extension context is valid
   if (!isExtensionContextValid()) {
     console.log(
@@ -41,6 +41,19 @@ function createFloatingButton() {
 
   // Check if button already exists
   if (document.getElementById("gistifi-fab")) return;
+
+  // Check if side panel is open before creating button
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: "GET_SIDE_PANEL_STATE",
+    });
+    if (response && response.isOpen) {
+      console.log("Side panel is open, skipping button creation");
+      return;
+    }
+  } catch (error) {
+    console.log("Error checking side panel state:", error);
+  }
 
   // Create button container
   const fabContainer = document.createElement("div");
@@ -145,7 +158,7 @@ function createFloatingButton() {
 }
 
 // Initialize floating button when page loads
-function initializeGistiFi() {
+async function initializeGistiFi() {
   if (!isExtensionContextValid()) {
     console.log("Extension context invalid, skipping initialization");
     return;
@@ -153,9 +166,17 @@ function initializeGistiFi() {
 
   // Create floating button after DOM is ready
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", createFloatingButton);
+    document.addEventListener("DOMContentLoaded", () => {
+      createFloatingButton().catch((error) => {
+        console.log("Error creating floating button:", error);
+      });
+    });
   } else {
-    createFloatingButton();
+    try {
+      await createFloatingButton();
+    } catch (error) {
+      console.log("Error creating floating button:", error);
+    }
   }
 }
 
@@ -167,6 +188,91 @@ function setupMessageListener() {
 
   try {
     chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
+      // Handle async operations
+      const handleAsync = async () => {
+        try {
+          if (req.type === "GET_ARTICLE_TEXT") {
+            const content = extractPageContent();
+            sendResponse({ content: content });
+            return true;
+          }
+
+          if (req.type === "GET_LEETCODE_PROBLEM_INFO") {
+            // Use the new LeetCodeProblemExtractor class
+            if (typeof LeetCodeProblemExtractor !== "undefined") {
+              const extractor = new LeetCodeProblemExtractor();
+              const problemInfo = extractor.extractProblemInfo();
+              console.log(
+                "Content script extracted problem info:",
+                problemInfo
+              );
+              sendResponse({ problemInfo: problemInfo });
+            } else {
+              // Fallback to old method
+              const problemInfo = extractLeetCodeProblemInfo();
+              console.log(
+                "Content script extracted problem info (fallback):",
+                problemInfo
+              );
+              sendResponse({ problemInfo: problemInfo });
+            }
+            return true;
+          }
+
+          if (req.type === "HIGHLIGHT_PAGE_CONTENT") {
+            highlightPageContent();
+            sendResponse({ success: true });
+            return true;
+          }
+
+          if (req.type === "SIDE_PANEL_OPENED") {
+            const fabContainer = document.querySelector(
+              ".gistifi-fab-container"
+            );
+            if (fabContainer) {
+              fabContainer.style.opacity = "0";
+              setTimeout(() => {
+                fabContainer.style.display = "none";
+              }, 300); // Match transition duration
+            }
+            sendResponse({ success: true });
+            return true;
+          }
+
+          if (req.type === "SIDE_PANEL_CLOSED") {
+            // Remove any existing button
+            const existingContainer = document.querySelector(
+              ".gistifi-fab-container"
+            );
+            if (existingContainer) {
+              existingContainer.remove();
+            }
+
+            // Create a new button
+            createFloatingButton();
+
+            sendResponse({ success: true });
+            return true;
+          }
+
+          if (req.type === "GET_LEETCODE_LANGUAGE") {
+            const language = this.extractLeetCodeLanguage();
+            sendResponse({ language: language });
+            return true;
+          }
+        } catch (error) {
+          console.log("Error handling message:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+      };
+
+      // Execute async handler for async operations
+      if (req.type === "GET_TOP_SOLUTIONS") {
+        handleAsync();
+        return true;
+      }
+
+      // Handle synchronous operations
       try {
         if (req.type === "GET_ARTICLE_TEXT") {
           const content = extractPageContent();
@@ -175,14 +281,12 @@ function setupMessageListener() {
         }
 
         if (req.type === "GET_LEETCODE_PROBLEM_INFO") {
-          // Use the new LeetCodeProblemExtractor class
           if (typeof LeetCodeProblemExtractor !== "undefined") {
             const extractor = new LeetCodeProblemExtractor();
             const problemInfo = extractor.extractProblemInfo();
             console.log("Content script extracted problem info:", problemInfo);
             sendResponse({ problemInfo: problemInfo });
           } else {
-            // Fallback to old method
             const problemInfo = extractLeetCodeProblemInfo();
             console.log(
               "Content script extracted problem info (fallback):",
@@ -200,19 +304,29 @@ function setupMessageListener() {
         }
 
         if (req.type === "SIDE_PANEL_OPENED") {
-          const fab = document.getElementById("gistifi-fab");
-          if (fab) {
-            fab.style.display = "none";
+          const fabContainer = document.querySelector(".gistifi-fab-container");
+          if (fabContainer) {
+            fabContainer.style.opacity = "0";
+            setTimeout(() => {
+              fabContainer.style.display = "none";
+            }, 300); // Match transition duration
           }
           sendResponse({ success: true });
           return true;
         }
 
         if (req.type === "SIDE_PANEL_CLOSED") {
-          const fab = document.getElementById("gistifi-fab");
-          if (fab) {
-            fab.style.display = "flex";
+          // Remove any existing button
+          const existingContainer = document.querySelector(
+            ".gistifi-fab-container"
+          );
+          if (existingContainer) {
+            existingContainer.remove();
           }
+
+          // Create a new button
+          createFloatingButton();
+
           sendResponse({ success: true });
           return true;
         }
@@ -241,6 +355,32 @@ function cleanupOldButtons() {
     console.log("Error cleaning up old buttons:", error);
   }
 }
+
+// Handle tab visibility changes
+document.addEventListener("visibilitychange", async () => {
+  if (!document.hidden) {
+    // Tab became visible, check side panel state
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "GET_SIDE_PANEL_STATE",
+      });
+      if (response && response.isOpen) {
+        // Side panel is open, remove floating button
+        const fabContainer = document.querySelector(".gistifi-fab-container");
+        if (fabContainer) {
+          fabContainer.remove();
+        }
+      } else {
+        // Side panel is closed, ensure button exists
+        if (!document.querySelector(".gistifi-fab-container")) {
+          createFloatingButton();
+        }
+      }
+    } catch (error) {
+      console.log("Error checking side panel state:", error);
+    }
+  }
+});
 
 // Only initialize if extension context is valid
 if (isExtensionContextValid()) {
@@ -871,6 +1011,7 @@ class LeetCodeProblemExtractor {
   /**
    * Normalize language names to standard format
    */
+
   normalizeLanguage(languageText) {
     if (!languageText) return "";
 

@@ -139,4 +139,6 @@
 .gistifi-fab-container {
   position: relative;
   z-index: 10000;
+  opacity: 1;
+  transition: opacity 0.3s ease;
 }

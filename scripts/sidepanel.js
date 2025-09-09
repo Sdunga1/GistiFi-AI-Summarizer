@@ -18,10 +18,12 @@ class GistiFiChat {
     await this.getCurrentTab();
     this.setupEventListeners();
     this.checkApiStatus();
-    this.loadChatHistory();
     this.setupCharCounter();
     this.setupCloseDetection();
+    // Load mode-specific UI first so it doesn't overwrite restored chat
     this.checkLeetCodeMode();
+    // Restore chat history after mode UI is settled
+    await this.loadChatHistory();
     await this.initializeYouTubeService();
 
     // Set initial button state based on current mode
@@ -404,6 +406,8 @@ class GistiFiChat {
       if (html) {
         const container = document.getElementById("chat-messages");
         container.innerHTML = html;
+        // Scroll to latest message on restore
+        container.scrollTop = container.scrollHeight;
         return true;
       }
       return false;
@@ -614,24 +618,34 @@ class GistiFiChat {
     this.isProcessing = true;
 
     try {
+      console.log("Processing message:", message);
+      console.log(
+        "Guide Me session active:",
+        this.guideMeSession && this.guideMeSession.isSessionActive()
+      );
+
       // Check if we're in an active Guide Me session
       if (this.guideMeSession && this.guideMeSession.isSessionActive()) {
+        console.log("Handling Guide Me conversation");
         await this.handleGuideMeConversation(message);
         return;
       }
 
       // Check if it's code (simple heuristic)
       if (this.isCodeContent(message)) {
+        console.log("Message is code, analyzing...");
         await this.analyzeCode(message);
       } else if (
         message.toLowerCase().includes("summarize") ||
         message.toLowerCase().includes("summary")
       ) {
+        console.log("Message contains summarize, calling summarizePage");
         await this.summarizePage();
       } else if (
         message.toLowerCase().includes("guide") ||
         message.toLowerCase().includes("help")
       ) {
+        console.log("Message contains guide/help, calling promptGuideMe");
         if (this.isLeetCodeModeActive()) {
           this.promptGuideMe();
         } else {
@@ -641,9 +655,15 @@ class GistiFiChat {
           );
         }
       } else if (
-        message.toLowerCase().includes("resources") ||
-        message.toLowerCase().includes("resource")
+        // Only trigger resources if it's a direct command, not a question
+        message.toLowerCase().includes("show resources") ||
+        message.toLowerCase().includes("display resources") ||
+        message.toLowerCase().includes("open resources") ||
+        message.toLowerCase().startsWith("resources")
       ) {
+        console.log(
+          "Message is a direct resources command, calling showResources"
+        );
         if (this.isLeetCodeModeActive()) {
           this.showResources();
         } else {
@@ -653,20 +673,14 @@ class GistiFiChat {
           );
         }
       } else {
-        // General AI response based on mode
-        if (this.isLeetCodeModeActive()) {
-          this.addMessage(
-            "I can help you get guided through LeetCode problems, analyze code, or find resources. Try using the quick action buttons or ask me for guidance!",
-            "bot"
-          );
-        } else {
-          this.addMessage(
-            "I can help you summarize this page or analyze code. Try using the quick action buttons or type 'summarize this page' for summaries!",
-            "bot"
-          );
-        }
+        // Always send to LLM for normal conversation
+        console.log(
+          "Message doesn't match any keywords, sending to LLM for chat"
+        );
+        await this.sendToLLMForChat(message);
       }
     } catch (error) {
+      console.error("Error in processMessage:", error);
       this.addMessage(`Error: ${error.message}`, "bot", "error");
     } finally {
       this.showLoading(false);
@@ -954,6 +968,9 @@ ${code}`,
   }
 
   addMessage(content, sender, type = "normal") {
+    // Ensure styles for enhanced UI elements
+    this.ensureThinkingStyles();
+    this.ensureCodeCardStyles();
     const messagesContainer = document.getElementById("chat-messages");
     const messageDiv = document.createElement("div");
     messageDiv.className = `message ${sender}-message`;
@@ -989,6 +1006,53 @@ ${code}`,
 
     // Save to chat history
     this.saveChatHistory();
+    // Also snapshot current HTML per channel so mode-specific reload restores correctly
+    try {
+      const channel = this.isLeetCodeModeActive() ? "leetcode" : "regular";
+      this.saveCurrentChatHTML(channel);
+    } catch (e) {
+      console.warn("Failed to snapshot chat HTML after message", e);
+    }
+    // Wire up copy buttons for any code cards in this message
+    try {
+      messageDiv.querySelectorAll(".code-card .copy-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const card = btn.closest(".code-card");
+          const codeEl = card?.querySelector("pre code");
+          // Prefer exact raw text if available
+          const rawB64 = codeEl?.getAttribute("data-raw-b64");
+          let codeText = "";
+          if (rawB64) {
+            try {
+              codeText = decodeURIComponent(escape(atob(rawB64)));
+            } catch (e) {
+              codeText = codeEl ? codeEl.innerText : "";
+            }
+          } else {
+            codeText = codeEl ? codeEl.innerText : "";
+          }
+          if (codeText) {
+            navigator.clipboard.writeText(codeText).then(
+              () => {
+                const original = btn.textContent;
+                btn.textContent = "Copied";
+                btn.classList.add("copied");
+                setTimeout(() => {
+                  btn.textContent = original;
+                  btn.classList.remove("copied");
+                }, 1200);
+              },
+              () => {
+                btn.textContent = "Copy failed";
+                setTimeout(() => (btn.textContent = "Copy"), 1200);
+              }
+            );
+          }
+        });
+      });
+    } catch (e) {
+      console.warn("Failed to bind copy buttons", e);
+    }
   }
 
   formatMessage(content, type) {
@@ -997,14 +1061,10 @@ ${code}`,
       return content;
     }
 
-    if (type === "code") {
-      // If content looks like code analysis, format it nicely
-      if (
-        content.includes("Time Complexity") &&
-        content.includes("Space Complexity")
-      ) {
-        return `<pre>${content}</pre>`;
-      }
+    // If content contains fenced code blocks, render them as code cards
+    const hasFenced = /```[\s\S]*?```/.test(content);
+    if (hasFenced || type === "code") {
+      return this.renderCodeCards(content);
     }
 
     // Convert newlines to <br> and handle basic formatting
@@ -1012,6 +1072,225 @@ ${code}`,
       .replace(/\n/g, "<br>")
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>");
+  }
+
+  renderCodeCards(text) {
+    const regex = /```(\w+)?\n([\s\S]*?)```/g;
+    let lastIndex = 0;
+    let html = "";
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      const before = text
+        .slice(lastIndex, match.index)
+        .replace(/\n/g, "<br>")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.*?)\*/g, "<em>$1</em>");
+      html += before;
+
+      const lang = (match[1] || "code").toLowerCase();
+      const rawCode = match[2];
+      const codeEscaped = rawCode
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      // No syntax highlighting for now; display plain escaped code
+      const highlighted = codeEscaped;
+      const rawB64 = btoa(unescape(encodeURIComponent(rawCode)));
+
+      html += `
+        <div class="code-card">
+          <div class="code-card-header">
+            <span class="lang">${lang}</span>
+            <button class="copy-btn" type="button">Copy</button>
+          </div>
+          <pre><code class="language-${lang}" data-raw-b64="${rawB64}">${highlighted}</code></pre>
+        </div>
+      `;
+
+      lastIndex = regex.lastIndex;
+    }
+
+    // Append any trailing text after last code block
+    const tail = text
+      .slice(lastIndex)
+      .replace(/\n/g, "<br>")
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>");
+    html += tail;
+    return html;
+  }
+
+  ensureCodeCardStyles() {
+    if (document.getElementById("gistifi-codecard-style")) return;
+    const style = document.createElement("style");
+    style.id = "gistifi-codecard-style";
+    style.textContent = `
+      .code-card { background: #0f1115; border: 1px solid #2a2f3a; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+      .code-card-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #12151c; border-bottom: 1px solid #2a2f3a; }
+      .code-card-header .lang { font-size: 12px; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.04em; }
+      .code-card-header .copy-btn { font-size: 12px; background: linear-gradient(135deg,rgb(168, 199, 229) 0%,rgb(32, 113, 199) 100%); color: #0b141a; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: transform .12s ease, opacity .2s ease; font-weight: 600; }
+      .code-card-header .copy-btn:hover { opacity: 0.95; transform: translateY(-1px); }
+      .code-card-header .copy-btn.copied { background: linear-gradient(135deg,rgb(248, 223, 98) 0%,rgb(244, 174, 21) 100%); color: #1a1a1a; }
+      .code-card pre { margin: 0; padding: 12px; overflow: auto; font-size: 12px; line-height: 1.55; }
+      .code-card pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color: #e6edf3; }
+      .token.comment { color: #8b949e; }
+      .token.keyword { color: #ff7b72; }
+      .token.string { color: #a5d6ff; }
+      .token.number { color: #79c0ff; }
+      .token.function { color: #d2a8ff; }
+      .token.type { color: #ffa657; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  highlightEscapedCode(code, lang) {
+    const lower = (lang || "").toLowerCase();
+    const isCpp = ["cpp", "c++", "cc", "c"].includes(lower);
+    const isJs = ["js", "javascript", "ts", "typescript"].includes(lower);
+    const isPy = ["py", "python"].includes(lower);
+
+    let result = code;
+
+    if (isPy) {
+      result = result.replace(
+        /(^|<br>)\s*#.*/g,
+        (m) => `<span class="token comment">${m}</span>`
+      );
+    }
+    if (isCpp || isJs) {
+      result = result
+        .replace(
+          /\/\/.*?(?=<br>|$)/g,
+          (m) => `<span class="token comment">${m}</span>`
+        )
+        .replace(
+          /\/\*[\s\S]*?\*\//g,
+          (m) => `<span class=\"token comment\">${m}</span>`
+        );
+    }
+
+    result = result
+      .replace(
+        /&quot;[\s\S]*?&quot;/g,
+        (m) => `<span class="token string">${m}</span>`
+      )
+      .replace(/'[^']*'/g, (m) => `<span class="token string">${m}</span>`);
+
+    result = result.replace(
+      /(?<![\w_])(\d+(?:\.\d+)?)(?![\w_])/g,
+      `<span class="token number">$1</span>`
+    );
+
+    const kw = isPy
+      ? [
+          "def",
+          "class",
+          "return",
+          "if",
+          "elif",
+          "else",
+          "for",
+          "while",
+          "in",
+          "and",
+          "or",
+          "not",
+          "import",
+          "from",
+          "as",
+          "None",
+          "True",
+          "False",
+          "try",
+          "except",
+          "with",
+          "pass",
+          "break",
+          "continue",
+          "lambda",
+        ]
+      : [
+          "auto",
+          "bool",
+          "break",
+          "case",
+          "catch",
+          "char",
+          "class",
+          "const",
+          "continue",
+          "default",
+          "delete",
+          "do",
+          "double",
+          "else",
+          "enum",
+          "explicit",
+          "extern",
+          "false",
+          "float",
+          "for",
+          "friend",
+          "goto",
+          "if",
+          "inline",
+          "int",
+          "long",
+          "namespace",
+          "new",
+          "operator",
+          "private",
+          "protected",
+          "public",
+          "register",
+          "return",
+          "short",
+          "signed",
+          "sizeof",
+          "static",
+          "struct",
+          "switch",
+          "template",
+          "this",
+          "throw",
+          "true",
+          "try",
+          "typedef",
+          "typename",
+          "union",
+          "unsigned",
+          "virtual",
+          "void",
+          "volatile",
+          "while",
+          "consteval",
+          "constexpr",
+          "constinit",
+          "let",
+          "var",
+          "function",
+          "import",
+          "export",
+          "from",
+          "as",
+        ];
+    const kwRegex = new RegExp(`(?<![\\w_])(${kw.join("|")})(?![\\w_])`, "g");
+    result = result.replace(kwRegex, `<span class="token keyword">$1</span>`);
+
+    result = result.replace(
+      /(?<![\w_\.])([a-zA-Z_][\w_]*)\s*(?=\()/g,
+      `<span class="token function">$1</span>`
+    );
+
+    if (isCpp || lower === "ts" || lower === "typescript") {
+      result = result.replace(
+        /(?<![\w_])(string|int|long|float|double|bool|void|size_t|std::\w+|vector|map|set)(?![\w_])/g,
+        `<span class="token type">$1</span>`
+      );
+    }
+
+    return result;
   }
 
   promptCodeAnalysis() {
@@ -1071,6 +1350,83 @@ ${code}`,
     const chatContainer = document.querySelector(".chat-container");
     if (chatContainer) {
       chatContainer.appendChild(buttonContainer);
+    }
+  }
+
+  /**
+   * Send message to LLM for normal chat conversation
+   */
+  async sendToLLMForChat(userMessage) {
+    try {
+      console.log("sendToLLMForChat called with message:", userMessage);
+
+      // Get Gemini API key
+      const { geminiApiKey } = await chrome.storage.sync.get(["geminiApiKey"]);
+      if (!geminiApiKey) {
+        console.log("No API key found");
+        this.addMessage(
+          "🔑 **API Key Required**: Please set your Gemini API key in the extension settings to use chat mode.",
+          "bot",
+          "error"
+        );
+        return;
+      }
+
+      // Build context-aware system prompt
+      let systemPrompt = "You are GistiFi, a helpful AI coding assistant. ";
+
+      if (this.isLeetCodeModeActive()) {
+        // Get current problem context if available
+        let problemContext = "";
+        try {
+          const problemInfo = await this.getLeetCodeProblemInfo();
+          if (problemInfo && problemInfo.title) {
+            problemContext = `\n\nCurrent Context: You're helping with LeetCode problem "${problemInfo.title}" (${problemInfo.difficulty}). The user is in the Resources section and can access:\n- YouTube video solutions\n- LeetCode resources (explore cards, discuss, problems)\n- Learning materials (GeeksforGeeks, HackerRank, etc.)\n- Books and courses\n- Practice tips\n\nYou should help explain resources, suggest features like Guide Me mode or code analysis, and answer questions about the current problem.`;
+          }
+        } catch (error) {
+          console.log("Could not get problem context:", error);
+        }
+
+        systemPrompt += `You're in LeetCode mode helping with coding problems.${problemContext}\n\nBe helpful, suggest exploring other features like Guide Me mode or code complexity analysis, and maintain conversation context.`;
+      } else {
+        systemPrompt +=
+          "You're in regular mode helping with general web page content. Be helpful and suggest using the available features.";
+      }
+
+      // Send to LLM
+      const response = await this.sendToLLM(systemPrompt, userMessage);
+
+      if (response) {
+        this.addMessage(response, "bot");
+      } else {
+        this.addMessage(
+          "❌ No response generated. Please try again.",
+          "bot",
+          "error"
+        );
+      }
+    } catch (error) {
+      console.error("Error in chat mode:", error);
+
+      if (error.message.includes("API key")) {
+        this.addMessage(
+          "🔑 **API Key Required**: Please set your Gemini API key in the extension settings to use chat mode.",
+          "bot",
+          "error"
+        );
+      } else if (error.message.includes("API request failed")) {
+        this.addMessage(
+          "🌐 **Network Error**: Unable to connect to AI service. Please check your internet connection and try again.",
+          "bot",
+          "error"
+        );
+      } else {
+        this.addMessage(
+          `❌ **AI Service Error**: ${error.message}. Please try again later.`,
+          "bot",
+          "error"
+        );
+      }
     }
   }
 
@@ -1191,12 +1547,61 @@ ${code}`,
   }
 
   showLoading(show) {
-    const overlay = document.getElementById("loading-overlay");
+    // Fancy thinking animation inside the chat instead of a blocking overlay
     if (show) {
-      overlay.classList.remove("hidden");
+      this.ensureThinkingStyles();
+      if (!this.thinkingMessageEl) {
+        const messagesContainer = document.getElementById("chat-messages");
+        const wrapper = document.createElement("div");
+        wrapper.className = "message bot-message";
+        wrapper.innerHTML = `
+          <div class="message-avatar"><img src="../assets/icon.png" alt="GistiFi"></div>
+          <div class="message-content">
+            <div class="message-bubble thinking-bubble">
+              <span class="thinking-dot"></span>
+              <span class="thinking-dot"></span>
+              <span class="thinking-dot"></span>
+              <span class="thinking-dot"></span>
+            </div>
+            <div class="message-time">&nbsp;</div>
+          </div>
+        `;
+        this.thinkingMessageEl = wrapper;
+        messagesContainer.appendChild(wrapper);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
     } else {
-      overlay.classList.add("hidden");
+      if (this.thinkingMessageEl && this.thinkingMessageEl.parentNode) {
+        this.thinkingMessageEl.parentNode.removeChild(this.thinkingMessageEl);
+      }
+      this.thinkingMessageEl = null;
     }
+  }
+
+  ensureThinkingStyles() {
+    if (document.getElementById("gistifi-thinking-style")) return;
+    const style = document.createElement("style");
+    style.id = "gistifi-thinking-style";
+    style.textContent = `
+      @keyframes gistifi-bounce {
+        0%, 80%, 100% { transform: translateY(1px) scale(0.7); opacity: 0.5; }
+        40% { transform: translateY(-2px) scale(1); opacity: 0.95; }
+      }
+      @keyframes gistifi-shimmer {
+        0% { background-position: -80px 0; }
+        100% { background-position: 80px 0; }
+      }
+      .thinking-bubble { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 12px; background: linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 100%); background-size: 160px 100%; animation: gistifi-shimmer 1.6s linear infinite; }
+      .thinking-dot {
+        width: 4px; height: 4px; border-radius: 50%; background: #b6bcc2;
+        display: inline-block; animation: gistifi-bounce 1.2s infinite ease-in-out both;
+      }
+      .thinking-dot:nth-child(1) { animation-delay: -0.27s; }
+      .thinking-dot:nth-child(2) { animation-delay: -0.18s; }
+      .thinking-dot:nth-child(3) { animation-delay: -0.09s; }
+      .thinking-dot:nth-child(4) { animation-delay: 0s; }
+    `;
+    document.head.appendChild(style);
   }
 
   async saveChatHistory() {
@@ -1223,7 +1628,7 @@ ${code}`,
       ]);
       const history = result[`chat_history_${this.currentTabId}`];
 
-      if (history && history.length > 1) {
+      if (history && history.length > 0) {
         // More than just welcome message
         const messagesContainer = document.getElementById("chat-messages");
         messagesContainer.innerHTML = ""; // Clear welcome message
@@ -1231,6 +1636,8 @@ ${code}`,
         history.forEach((msg) => {
           this.addMessageFromHistory(msg.content, msg.sender, msg.time);
         });
+        // Scroll to latest message after restore
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
     } catch (error) {
       console.error("Error loading chat history:", error);
@@ -1263,6 +1670,13 @@ ${code}`,
   setupCloseDetection() {
     // Detect when the side panel is closed by listening for beforeunload
     window.addEventListener("beforeunload", () => {
+      // Persist current chat HTML snapshot for active channel before closing
+      try {
+        const channel = this.isLeetCodeModeActive() ? "leetcode" : "regular";
+        this.saveCurrentChatHTML(channel);
+      } catch (e) {
+        console.warn("Failed to save chat HTML on unload", e);
+      }
       // Notify background and content script that side panel is closing
       if (this.currentTabId) {
         try {
@@ -1286,6 +1700,13 @@ ${code}`,
     // Also detect when the document becomes hidden (side panel closed)
     document.addEventListener("visibilitychange", () => {
       if (document.hidden && this.currentTabId) {
+        // Persist snapshot when panel becomes hidden
+        try {
+          const channel = this.isLeetCodeModeActive() ? "leetcode" : "regular";
+          this.saveCurrentChatHTML(channel);
+        } catch (e) {
+          console.warn("Failed to save chat HTML on hide", e);
+        }
         try {
           // Update background state
           chrome.runtime.sendMessage({
@@ -1657,41 +2078,10 @@ ${code}`,
               <span style="font-size: 16px;">💬</span> LeetCode Discuss
             </a>
             <a href="https://leetcode.com/problemset/all/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
-              <span style="font-size: 16px;">📝</span> LeetCode Solutions
+              <span style="font-size: 16px;">📝</span> LeetCode Problems
             </a>
-          </div>
-        </div>
-
-        <div style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-          <h3 style="margin: 0 0 12px 0; color: white; font-size: 18px; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 20px;">📖</span> Learning Materials
-          </h3>
-          <div style="display: grid; gap: 8px;">
-            <a href="https://www.geeksforgeeks.org/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
-              <span style="font-size: 16px;">🌟</span> GeeksforGeeks
-            </a>
-            <a href="https://www.hackerrank.com/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
-              <span style="font-size: 16px;">💻</span> HackerRank
-            </a>
-            <a href="https://www.algoexpert.io/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
-              <span style="font-size: 16px;">🧠</span> AlgoExpert
-            </a>
-          </div>
-        </div>
-
-        <div style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-          <h3 style="margin: 0 0 12px 0; color: white; font-size: 18px; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 20px;">📚</span> Books & Courses
-          </h3>
-          <div style="display: grid; gap: 8px;">
-            <div style="color: white; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">📗</span> "Cracking the Coding Interview" by Gayle McDowell
-            </div>
-            <div style="color: white; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">📘</span> "Introduction to Algorithms" (CLRS)
-            </div>
-            <a href="https://leetcode.com/subscribe/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
-              <span style="font-size: 16px;">⭐</span> LeetCode Premium
+            <a href="${baseProblemUrl}solutions/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">🏆</span> View Top Solutions & Discussions
             </a>
           </div>
         </div>
@@ -1715,12 +2105,57 @@ ${code}`,
             </div>
           </div>
         </div>
+
+        <div style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+          <h3 style="margin: 0 0 12px 0; color: white; font-size: 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+            <span style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">📖</span> Learning Materials
+            </span>
+            <span class="dropdown-icon" style="font-size: 16px; transition: transform 0.3s ease;">▶</span>
+          </h3>
+          <div id="learning-materials" class="expandable-section" style="display: none; grid; gap: 8px;">
+            <a href="https://www.geeksforgeeks.org/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">🌟</span> GeeksforGeeks
+            </a>
+            <a href="https://www.hackerrank.com/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">💻</span> HackerRank
+            </a>
+            <a href="https://www.algoexpert.io/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">🧠</span> AlgoExpert
+            </a>
+          </div>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+          <h3 style="margin: 0 0 12px 0; color: white; font-size: 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+            <span style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">📚</span> Books & Courses
+            </span>
+            <span class="dropdown-icon" style="font-size: 16px; transition: transform 0.3s ease;">▶</span>
+          </h3>
+          <div id="books-courses" class="expandable-section" style="display: none; grid; gap: 8px;">
+            <div style="color: white; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">📗</span> "Cracking the Coding Interview" by Gayle McDowell
+            </div>
+            <div style="color: white; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">📘</span> "Introduction to Algorithms" (CLRS)
+            </div>
+            <a href="https://leetcode.com/subscribe/" target="_blank" class="resource-link" style="color: white; text-decoration: none; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+              <span style="font-size: 16px;">⭐</span> LeetCode Premium
+            </a>
+          </div>
+        </div>
+
+
       </div>
 
       <div style="text-align: center; margin-top: 24px; font-size: 16px;">Happy learning! 🚀</div>
     `;
 
     this.addMessage(resourcesMessage, "bot", "html");
+
+    // Add the toggle functionality script
+    this.addToggleScript();
   }
 
   /**
@@ -1992,6 +2427,54 @@ ${code}`,
     const chatInput = document.getElementById("chat-input");
     if (chatInput) {
       chatInput.placeholder = "Type your message...";
+    }
+  }
+
+  /**
+   * Add toggle functionality for expandable sections
+   */
+  addToggleScript() {
+    // Add event listeners to the expandable sections
+    setTimeout(() => {
+      // Find the sections by ID and get their previous sibling (the h3 header)
+      const learningMaterialsSection =
+        document.getElementById("learning-materials");
+      const booksCoursesSection = document.getElementById("books-courses");
+
+      if (learningMaterialsSection) {
+        const learningMaterialsHeader =
+          learningMaterialsSection.previousElementSibling;
+        if (learningMaterialsHeader) {
+          learningMaterialsHeader.onclick = () =>
+            this.toggleSection("learning-materials");
+        }
+      }
+
+      if (booksCoursesSection) {
+        const booksCoursesHeader = booksCoursesSection.previousElementSibling;
+        if (booksCoursesHeader) {
+          booksCoursesHeader.onclick = () =>
+            this.toggleSection("books-courses");
+        }
+      }
+    }, 100);
+  }
+
+  /**
+   * Toggle section expansion
+   */
+  toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    const icon = section.previousElementSibling.querySelector(".dropdown-icon");
+
+    if (section.style.display === "none") {
+      section.style.display = "grid";
+      icon.style.transform = "rotate(0deg)";
+      icon.textContent = "▼";
+    } else {
+      section.style.display = "none";
+      icon.style.transform = "rotate(-90deg)";
+      icon.textContent = "▶";
     }
   }
 
