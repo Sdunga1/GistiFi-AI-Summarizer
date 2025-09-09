@@ -585,7 +585,11 @@ class GistiFiChat {
         await this.summarizePage();
         break;
       case "analyze-code":
-        this.promptCodeAnalysis();
+        if (this.isLeetCodeModeActive()) {
+          await this.analyzeCurrentLeetCodeCode();
+        } else {
+          this.promptCodeAnalysis();
+        }
         break;
       case "ask-question":
         this.promptQuestion();
@@ -899,6 +903,243 @@ class GistiFiChat {
       console.error("Code analysis error:", error);
       this.addMessage(`Error analyzing code: ${error.message}`, "bot", "error");
     }
+  }
+
+  // Analyze currently open LeetCode code without asking user to paste
+  async analyzeCurrentLeetCodeCode() {
+    try {
+      this.updateModeIndicator(true, "Analyze Code");
+      this.showLoading(true);
+
+      const problemInfo = await this.getLeetCodeProblemInfo();
+      const userCode = (problemInfo?.userCode || "").trim();
+      const lang = await this.getLeetCodeProgrammingLanguage();
+
+      const { geminiApiKey } = await chrome.storage.sync.get(["geminiApiKey"]);
+      if (!geminiApiKey) {
+        this.addMessage(
+          "🔑 **API Key Required**: Please set your Gemini API key in settings to analyze code.",
+          "bot",
+          "error"
+        );
+        return;
+      }
+
+      // Single, unified prompt: classify status and always return complexity buckets.
+      const systemPrompt = [
+        "You are an expert reviewer for LeetCode solutions.",
+        "Analyze the user's code for the given problem and classify status as exactly one of:",
+        "- template_only (only signature/placeholder like pass/return 0/TODO/empty body)",
+        "- incomplete (some logic but missing essential handling/edge cases)",
+        "- incorrect (appears wrong for constraints/edge cases)",
+        "- correct (appears correct and handles edge cases)",
+        "Return ONLY JSON with fields:",
+        '{"status":"template_only|incomplete|incorrect|correct","reason":"...","time_bucket":"O(1)|O(log n)|O(n)|O(n log n)|O(n^2)|O(n^3)|O(2^n)|O(n!)|O(k·n)","space_bucket":"O(1)|O(log n)|O(n)|O(n log n)|O(n^2)","n_symbol":"n","n_max":NUMBER,"hints":"...optional when not correct"}',
+        "Rules:",
+        "- If status is template_only or incomplete or incorrect: time_bucket and space_bucket MUST reflect the anticipated complexity of a typical correct approach to this problem, not the current code.",
+        "- If status is correct: buckets reflect this code's complexity.",
+        "- Assume worst-case and infer n_max from constraints when possible.",
+        "Output JSON only, no extra text.",
+      ].join("\n");
+
+      const userMessage = [
+        `Problem: ${problemInfo.title} (${problemInfo.difficulty})`,
+        `Constraints: ${(problemInfo.constraints || []).join("; ")}`,
+        `Language: ${lang}`,
+        "User Code:",
+        userCode || "(no code visible)",
+      ].join("\n\n");
+
+      const raw = await this.sendToLLM(systemPrompt, userMessage);
+      let parsed;
+      try {
+        const jsonText = (raw || "").match(/\{[\s\S]*\}/)?.[0] || "";
+        parsed = JSON.parse(jsonText);
+      } catch {
+        this.addMessage(
+          "❌ Couldn't parse analysis. Please try again.",
+          "bot",
+          "error"
+        );
+        return;
+      }
+
+      const nMax = Math.min(Number(parsed?.n_max) || 1000, 1000000);
+      const nSymbol = parsed?.n_symbol || "n";
+      const timeSvg = this.renderComplexitySVG(
+        parsed?.time_bucket || "O(n)",
+        nMax,
+        nSymbol,
+        "Time Complexity"
+      );
+      const spaceSvg = this.renderComplexitySVG(
+        parsed?.space_bucket || "O(1)",
+        nMax,
+        nSymbol,
+        "Space Complexity"
+      );
+
+      let html = `<div style=\"margin-bottom:12px\">`;
+      let verdict;
+      switch (parsed?.status) {
+        case "correct":
+          verdict = "✅ Correct";
+          break;
+        case "incorrect":
+          verdict = "⚠️ Likely Incorrect";
+          break;
+        case "incomplete":
+          verdict = "🧩 Incomplete";
+          break;
+        case "template_only":
+          verdict = "ℹ️ No code detected";
+          break;
+        default:
+          verdict = "ℹ️ Analysis";
+      }
+      html += `<div style=\"font-weight:600;margin-bottom:6px\">${verdict}</div>`;
+      if (parsed?.reason)
+        html += `<div style=\"color:#ccc;margin-bottom:10px\">${this.escapeHtml(
+          parsed.reason
+        )}</div>`;
+      html += `<div style=\"display:grid; gap:12px;\">${timeSvg}${spaceSvg}</div>`;
+      html += `<div style=\"color:#999; font-size:12px; margin-top:8px;\">Assumptions: worst-case, asymptotic growth. Scale estimated from constraints.</div>`;
+      if (parsed?.status !== "correct" && parsed?.hints) {
+        html += `<div style=\"margin-top:10px; padding:10px; border-radius:8px; background: rgba(255, 255, 255, 0.05);\"><strong>Hint:</strong> ${this.escapeHtml(
+          parsed.hints
+        )}<br><em>Tip:</em> Try Stuck Mode for step-by-step help.</div>`;
+      }
+      if (parsed?.status === "correct") {
+        html += `<div style=\"margin-top:10px; color:#bfbfbf; font-size:13px;\">Want a deeper walkthrough? Open <strong>Guide Me → Analyze Complexity</strong> for step-by-step intuition.</div>`;
+      }
+      html += `</div>`;
+
+      this.addMessage(html, "bot", "html");
+    } catch (e) {
+      console.error("analyzeCurrentLeetCodeCode error", e);
+      this.addMessage(`❌ Error analyzing code: ${e.message}`, "bot", "error");
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
+  escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  renderComplexitySVG(bucket, nMax, nSymbol, title) {
+    const w = 360,
+      h = 200,
+      pad = 36;
+    const plotW = w - pad * 2,
+      plotH = h - pad * 2;
+    const samples = 40;
+    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+    const logN = (x) => Math.log(1 + x);
+    const norm = (arr) => {
+      const mx = Math.max(...arr.map((p) => p.y)) || 1;
+      return arr.map((p) => ({ x: p.x, y: p.y / mx }));
+    };
+    const gen = (fn) => {
+      const pts = [];
+      for (let i = 0; i <= samples; i++) {
+        const x = (i / samples) * nMax;
+        pts.push({ x, y: fn(x) });
+      }
+      return norm(pts);
+    };
+
+    const funcs = {
+      "O(1)": (x) => 1,
+      "O(log n)": (x) => logN(x),
+      "O(n)": (x) => x,
+      "O(n log n)": (x) => x * logN(x),
+      "O(n^2)": (x) => (x * x) / Math.max(1, nMax),
+      "O(n^3)": (x) => (x * x * x) / Math.max(1, nMax * nMax),
+      "O(2^n)": (x) => Math.pow(2, x / Math.max(1, nMax / 10)),
+      "O(n!)": (x) => Math.pow(x / Math.max(1, nMax), 5),
+      "O(k·n)": (x) => x,
+    };
+    const primary = funcs[bucket] ? bucket : "O(n)";
+
+    const refBuckets = [
+      "O(1)",
+      "O(log n)",
+      "O(n)",
+      "O(n log n)",
+      "O(n^2)",
+      "O(n^3)",
+    ];
+    const toPath = (pts) =>
+      pts
+        .map((p, i) => {
+          const px = pad + (p.x / nMax) * plotW;
+          const py = pad + (1 - clamp(p.y, 0, 1)) * plotH;
+          return `${i ? "L" : "M"}${px.toFixed(1)},${py.toFixed(1)}`;
+        })
+        .join(" ");
+
+    const refPaths = refBuckets
+      .filter((b) => b !== primary && funcs[b])
+      .map((b) => {
+        const pts = gen(funcs[b]);
+        return `<path d="${toPath(
+          pts
+        )}" stroke="#666" stroke-width="1" fill="none" opacity="0.25"/>`;
+      })
+      .join("");
+
+    const mainPts = gen(funcs[primary]);
+    const mainPath = `<path d="${toPath(
+      mainPts
+    )}" stroke="#a855f7" stroke-width="2.5" fill="none"/>`;
+
+    return `
+      <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="background:#121212;border-radius:12px;border:1px solid #2a2f3a;">
+        <text x="${w / 2}" y="${
+      pad - 10
+    }" text-anchor="middle" fill="#e5e7eb" font-size="14" font-weight="600">${title}</text>
+        <g stroke="#3a3f4b" stroke-width="1">
+          <line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}"/>
+          <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h - pad}"/>
+        </g>
+        <text x="${w - pad}" y="${
+      h - pad + 18
+    }" text-anchor="end" fill="#9aa0a6" font-size="11">${nSymbol}</text>
+        <text x="${
+          pad - 6
+        }" y="${pad}" text-anchor="end" fill="#9aa0a6" font-size="11">Ops</text>
+        ${refPaths}
+        ${mainPath}
+        <text x="${w / 2}" y="${
+      pad + 18
+    }" text-anchor="middle" fill="#c084fc" font-size="16" font-weight="700">${primary}</text>
+      </svg>
+    `;
+  }
+
+  // Heuristic to detect template-only code (empty body, pass/return placeholders)
+  isLikelyTemplateCode(code, lang) {
+    const c = (code || "").trim();
+    if (c.length < 20) return true;
+    const lower = (lang || "").toLowerCase();
+    // Common placeholders across languages
+    const patterns = [
+      /return\s+0\s*;?$/m,
+      /return\s+null\s*;?$/m,
+      /return\s+None\s*$/m,
+      /pass\s*$/m,
+      /TODO/i,
+      /write\s+your\s+code/i,
+    ];
+    if (patterns.some((p) => p.test(c))) return true;
+    // Very small number of non-whitespace lines
+    const nonEmptyLines = c.split(/\n/).filter((l) => l.trim().length > 0);
+    if (nonEmptyLines.length <= 3) return true;
+    return false;
   }
 
   getCodeAnalysisPrompt(code, type) {
