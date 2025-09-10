@@ -676,6 +676,22 @@ class GistiFiChat {
             "bot"
           );
         }
+      } else if (
+        // Hints command
+        message.toLowerCase().includes("show hints") ||
+        message.toLowerCase().includes("display hints") ||
+        message.toLowerCase().includes("hints") ||
+        message.toLowerCase().startsWith("hint")
+      ) {
+        console.log("Message is a hints command, calling showHints");
+        if (this.isLeetCodeModeActive()) {
+          await this.showHints();
+        } else {
+          this.addMessage(
+            "Hints are only available for LeetCode problems. Please navigate to a LeetCode problem page first.",
+            "bot"
+          );
+        }
       } else {
         // Always send to LLM for normal conversation
         console.log(
@@ -2051,6 +2067,13 @@ ${code}`,
           `• Constraints: ${
             problemInfo.constraints ? problemInfo.constraints.length : 0
           } found<br>` +
+          `• Hints: ${
+            problemInfo.hints && problemInfo.hints.length > 0
+              ? `${problemInfo.hints.length} found (${problemInfo.hints
+                  .map((h) => `Hint ${h.number}`)
+                  .join(", ")})`
+              : "0 found"
+          }<br>` +
           `• URL: ${problemInfo.url}<br><br>` +
           `Check the browser console for detailed extraction logs.`,
         "bot"
@@ -2061,6 +2084,63 @@ ${code}`,
     } catch (error) {
       this.addMessage(`❌ **Debug Error:** ${error.message}`, "bot", "error");
       console.error("Debug extraction error:", error);
+    }
+  }
+
+  displayHints(hints) {
+    if (!hints || hints.length === 0) return;
+
+    let hintsHtml = `<div style="margin-top: 12px; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border-left: 3px solid #4CAF50;">`;
+    hintsHtml += `<div style="font-weight: 600; margin-bottom: 8px; color: #4CAF50;">💡 Problem Hints (${hints.length})</div>`;
+
+    hints.forEach((hint, index) => {
+      hintsHtml += `<div style="margin-bottom: 8px;">`;
+      hintsHtml += `<div style="font-weight: 500; color: #81C784; margin-bottom: 4px;">Hint ${hint.number}:</div>`;
+      hintsHtml += `<div style="color: #E0E0E0; line-height: 1.4;">${this.escapeHtml(
+        hint.text
+      )}</div>`;
+      hintsHtml += `</div>`;
+    });
+
+    hintsHtml += `</div>`;
+
+    this.addMessage(hintsHtml, "bot", "html");
+  }
+
+  async showHints() {
+    try {
+      const problemInfo = await this.getLeetCodeProblemInfo();
+
+      if (!problemInfo || !problemInfo.title) {
+        this.addMessage(
+          "❌ Could not detect a LeetCode problem. Please make sure you're on a LeetCode problem page.",
+          "bot",
+          "error"
+        );
+        return;
+      }
+
+      if (!problemInfo.hints || problemInfo.hints.length === 0) {
+        this.addMessage(
+          "💡 No hints available for this problem. Try using the 'Guide Me' feature for step-by-step guidance!",
+          "bot"
+        );
+        return;
+      }
+
+      this.addMessage(
+        `💡 **Hints for ${problemInfo.title}** (${problemInfo.hints.length} available)`,
+        "bot"
+      );
+
+      this.displayHints(problemInfo.hints);
+    } catch (error) {
+      console.error("Error showing hints:", error);
+      this.addMessage(
+        `❌ Error retrieving hints: ${error.message}`,
+        "bot",
+        "error"
+      );
     }
   }
 

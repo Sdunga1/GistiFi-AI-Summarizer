@@ -476,6 +476,18 @@ class LeetCodeProblemExtractor {
         ".examples",
         ".problem-examples",
       ],
+
+      // Hints selectors - based on the HTML structure you provided
+      hints: [
+        // Primary selector for hint containers
+        'div[class*="flex flex-col"] div[class*="group flex cursor-pointer"]',
+        // Alternative selectors for hint sections
+        'div[class*="overflow-hidden transition-all"] div[class*="text-body text-sd-foreground mt-2 pl-7"]',
+        // Fallback selectors
+        '[class*="hint"]',
+        ".hint",
+        ".hints",
+      ],
     };
   }
 
@@ -491,6 +503,7 @@ class LeetCodeProblemExtractor {
         examples: this.extractExamples(),
         constraints: this.extractConstraints(),
         similarQuestions: this.extractSimilarQuestions(),
+        hints: this.extractHints(),
         userCode: this.extractUserCode(),
         url: window.location.href,
         timestamp: new Date().toISOString(),
@@ -905,6 +918,83 @@ class LeetCodeProblemExtractor {
 
     console.log("User code length:", userCode.length);
     return userCode;
+  }
+
+  extractHints() {
+    console.log("Extracting hints...");
+    const hints = [];
+
+    try {
+      // Look for hint containers with the specific structure from your HTML
+      const hintContainers = document.querySelectorAll(
+        'div[class*="flex flex-col"]'
+      );
+
+      hintContainers.forEach((container, index) => {
+        // Look for the hint header (contains "Hint 1", "Hint 2", etc.)
+        const hintHeader = container.querySelector('div[class*="text-body"]');
+        if (hintHeader && hintHeader.textContent.includes("Hint")) {
+          // Extract the actual hint number from the text
+          const hintNumberMatch = hintHeader.textContent.match(/Hint\s*(\d+)/);
+          const hintNumber = hintNumberMatch
+            ? parseInt(hintNumberMatch[1])
+            : index + 1;
+
+          // Look for the hint content in the expanded section
+          const hintContent = container.querySelector(
+            'div[class*="text-body text-sd-foreground mt-2 pl-7"]'
+          );
+          if (hintContent) {
+            const hintText = hintContent.textContent.trim();
+            if (hintText && hintText.length > 0) {
+              hints.push({
+                number: hintNumber,
+                text: hintText,
+              });
+              console.log(
+                `Found hint ${hintNumber}:`,
+                hintText.substring(0, 100) + "..."
+              );
+            }
+          }
+        }
+      });
+
+      // Fallback: Look for any elements containing "Hint" text
+      if (hints.length === 0) {
+        const allElements = document.querySelectorAll("*");
+        allElements.forEach((element) => {
+          const text = element.textContent;
+          if (text && text.includes("Hint") && text.length < 500) {
+            // Check if this looks like a hint (not too long, contains hint-like content)
+            const hintMatch = text.match(/Hint\s*(\d+)[\s\S]*?([A-Z][^.]*\.)/);
+            if (hintMatch) {
+              const hintNumber = parseInt(hintMatch[1]);
+              const hintText = hintMatch[2].trim();
+              if (hintText && !hints.find((h) => h.number === hintNumber)) {
+                hints.push({
+                  number: hintNumber,
+                  text: hintText,
+                });
+                console.log(
+                  `Found hint ${hintNumber} (fallback):`,
+                  hintText.substring(0, 100) + "..."
+                );
+              }
+            }
+          }
+        });
+      }
+
+      // Sort hints by number
+      hints.sort((a, b) => a.number - b.number);
+
+      console.log(`Extracted ${hints.length} hints`);
+      return hints;
+    } catch (error) {
+      console.error("Error extracting hints:", error);
+      return [];
+    }
   }
 
   isConstraint(text) {
