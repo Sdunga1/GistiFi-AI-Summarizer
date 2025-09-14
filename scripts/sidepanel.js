@@ -78,6 +78,7 @@ class GistiFiChat {
 
   toggleActionButtons(isLeetCodeMode) {
     const resourcesBtn = document.querySelector('[data-action="resources"]');
+    const stuckModeBtn = document.querySelector('[data-action="stuck-mode"]');
     const debugBtn = document.querySelector('[data-action="debug-extract"]');
     const summarizeBtn = document.querySelector('[data-action="summarize"]');
     const askQuestionBtn = document.querySelector(
@@ -87,6 +88,7 @@ class GistiFiChat {
     if (isLeetCodeMode) {
       // Show LeetCode-specific buttons
       if (resourcesBtn) resourcesBtn.style.display = "inline-flex";
+      if (stuckModeBtn) stuckModeBtn.style.display = "inline-flex";
       if (debugBtn) debugBtn.style.display = "inline-flex";
       // Hide regular mode buttons
       if (summarizeBtn) summarizeBtn.style.display = "none";
@@ -97,6 +99,7 @@ class GistiFiChat {
       if (askQuestionBtn) askQuestionBtn.style.display = "inline-flex";
       // Hide LeetCode-specific buttons
       if (resourcesBtn) resourcesBtn.style.display = "none";
+      if (stuckModeBtn) stuckModeBtn.style.display = "none";
       if (debugBtn) debugBtn.style.display = "none";
     }
 
@@ -485,6 +488,9 @@ class GistiFiChat {
 
     // Header buttons
     document
+      .getElementById("download-btn")
+      .addEventListener("click", this.downloadChat.bind(this));
+    document
       .getElementById("settings-btn")
       .addEventListener("click", this.openSettings.bind(this));
     document
@@ -590,6 +596,9 @@ class GistiFiChat {
         } else {
           this.promptCodeAnalysis();
         }
+        break;
+      case "stuck-mode":
+        await this.startStuckMode();
         break;
       case "ask-question":
         this.promptQuestion();
@@ -1751,6 +1760,287 @@ ${code}`,
     chrome.runtime.openOptionsPage();
   }
 
+  async downloadChat() {
+    try {
+      // Get current problem info for filename
+      const problemInfo = await this.getLeetCodeProblemInfo();
+      const problemName = problemInfo?.title || "Unknown-Problem";
+      const difficulty = problemInfo?.difficulty || "";
+
+      // Generate filename with current date
+      const now = new Date();
+      const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD format
+      const filename = `LeetCode-${problemName.replace(
+        /[^a-zA-Z0-9]/g,
+        "-"
+      )}-${dateStr}.html`;
+
+      // Get all chat messages
+      const messagesContainer = document.getElementById("chat-messages");
+      const messages = messagesContainer.querySelectorAll(".message");
+
+      if (messages.length === 0) {
+        this.addMessage("No messages to download", "bot", "error");
+        return;
+      }
+
+      // Generate HTML content
+      const htmlContent = this.generateChatHTML(messages, problemInfo);
+
+      // Create and download file
+      const blob = new Blob([htmlContent], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      this.addMessage("✅ Chat downloaded successfully!", "bot", "success");
+    } catch (error) {
+      console.error("Error downloading chat:", error);
+      this.addMessage("❌ Failed to download chat", "bot", "error");
+    }
+  }
+
+  generateChatHTML(messages, problemInfo) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode: ${
+      problemInfo?.title || "Chat Session"
+    } - ${dateStr}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .header .meta {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .chat-container {
+            padding: 20px;
+        }
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .message.user-message {
+            flex-direction: row-reverse;
+        }
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .message.user-message .message-avatar {
+            background: #28a745;
+        }
+        .message-content {
+            flex: 1;
+            max-width: 70%;
+        }
+        .message-bubble {
+            background: #f1f3f4;
+            padding: 15px;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+        }
+        .message.user-message .message-bubble {
+            background: #007bff;
+            color: white;
+            border-bottom-left-radius: 18px;
+            border-bottom-right-radius: 4px;
+        }
+        .message-time {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            text-align: right;
+        }
+        .message.user-message .message-time {
+            text-align: left;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .code-block .copy-btn {
+            background: #4a5568;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 14px;
+        }
+        .problem-details {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        .problem-details h3 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+        .problem-details p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>LeetCode: ${problemInfo?.title || "Chat Session"}</h1>
+            <div class="meta">
+                ${
+                  problemInfo?.difficulty
+                    ? `Difficulty: ${problemInfo.difficulty} • `
+                    : ""
+                }
+                Date: ${dateStr} • 
+                Generated by GistiFi AI Summarizer
+            </div>
+        </div>
+        
+        <div class="chat-container">`;
+
+    // Add problem details if available
+    if (problemInfo && problemInfo.title) {
+      html += `
+            <div class="problem-details">
+                <h3>Problem Information</h3>
+                <p><strong>Title:</strong> ${problemInfo.title}</p>
+                ${
+                  problemInfo.difficulty
+                    ? `<p><strong>Difficulty:</strong> ${problemInfo.difficulty}</p>`
+                    : ""
+                }
+                ${
+                  problemInfo.constraints && problemInfo.constraints.length > 0
+                    ? `<p><strong>Constraints:</strong> ${problemInfo.constraints.join(
+                        "; "
+                      )}</p>`
+                    : ""
+                }
+                ${
+                  problemInfo.examples && problemInfo.examples.length > 0
+                    ? `<p><strong>Examples:</strong> ${problemInfo.examples.join(
+                        "; "
+                      )}</p>`
+                    : ""
+                }
+            </div>`;
+    }
+
+    html += `
+            <h3>Chat History</h3>`;
+
+    // Process each message
+    messages.forEach((message) => {
+      const isUser = message.classList.contains("user-message");
+      const avatar = isUser ? "U" : "G";
+      const timeElement = message.querySelector(".message-time");
+      const time = timeElement ? timeElement.textContent : "";
+
+      // Get message content
+      const bubble = message.querySelector(".message-bubble");
+      if (!bubble) return;
+
+      // Clone to avoid modifying original
+      const content = bubble.cloneNode(true);
+
+      // Process code blocks
+      const codeBlocks = content.querySelectorAll(".code-block");
+      codeBlocks.forEach((block) => {
+        const copyBtn = block.querySelector(".copy-btn");
+        if (copyBtn) copyBtn.remove(); // Remove copy button for export
+      });
+
+      html += `
+            <div class="message ${isUser ? "user-message" : ""}">
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        ${content.innerHTML}
+                    </div>
+                    ${time ? `<div class="message-time">${time}</div>` : ""}
+                </div>
+            </div>`;
+    });
+
+    html += `
+        </div>
+        
+        <div class="footer">
+            <p>Generated by GistiFi AI Summarizer on ${dateStr}</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    return html;
+  }
+
   clearChat() {
     const messagesContainer = document.getElementById("chat-messages");
 
@@ -2138,6 +2428,125 @@ ${code}`,
       console.error("Error showing hints:", error);
       this.addMessage(
         `❌ Error retrieving hints: ${error.message}`,
+        "bot",
+        "error"
+      );
+    }
+  }
+
+  async startStuckMode() {
+    try {
+      // Check if we're on a LeetCode page
+      if (!this.isLeetCodeModeActive()) {
+        this.addMessage(
+          "❌ Stuck Mode is only available on LeetCode problem pages. Please navigate to a LeetCode problem first.",
+          "bot",
+          "error"
+        );
+        return;
+      }
+
+      // Get problem info and user code (same as Analyze Code)
+      const problemInfo = await this.getLeetCodeProblemInfo();
+      const userCode = (problemInfo?.userCode || "").trim();
+      const lang = await this.getLeetCodeProgrammingLanguage();
+
+      // Update mode indicator
+      this.updateModeIndicator(true, "Stuck Mode");
+
+      // Add thinking animation
+      this.showLoading(true);
+
+      const { geminiApiKey } = await chrome.storage.sync.get(["geminiApiKey"]);
+      if (!geminiApiKey) {
+        this.showLoading(false);
+        this.addMessage(
+          "🔑 **API Key Required**: Please set your Gemini API key in settings to use Stuck Mode.",
+          "bot",
+          "error"
+        );
+        return;
+      }
+
+      // System prompt for conversational guidance
+      const systemPrompt = [
+        "You are an expert coding mentor helping a student who is stuck on their LeetCode solution.",
+        "The student needs conversational guidance, NOT a complete solution dump.",
+        "",
+        "YOUR ROLE:",
+        "- Be a patient, encouraging mentor",
+        "- Guide them step by step through conversation",
+        "- Ask questions to understand their thinking",
+        "- Give hints and suggestions, not complete answers",
+        "- Help them discover the solution themselves",
+        "",
+        "CONVERSATION STYLE:",
+        "- Start with understanding what they've tried",
+        "- Ask about their current approach",
+        "- Give small hints and let them work through it",
+        "- Only provide complete code when they specifically ask",
+        "- Keep responses concise (2-3 sentences max)",
+        "- Be encouraging and supportive",
+        "",
+        "FIRST RESPONSE:",
+        "- Analyze their current code briefly",
+        "- Ask what specific part they're stuck on",
+        "- Give ONE small hint or suggestion",
+        "- Ask them to try it and report back",
+        "",
+        "IMPORTANT:",
+        "- Use available hints if provided",
+        "- Don't dump the complete solution",
+        "- Make them think and participate",
+        "- This is a conversation, not a tutorial",
+      ].join("\n");
+
+      // Build hints context
+      let hintsContext = "";
+      if (problemInfo.hints && problemInfo.hints.length > 0) {
+        hintsContext = "\n\n**Available Hints:**\n";
+        problemInfo.hints.forEach((hint) => {
+          hintsContext += `${hint.number}. ${hint.text}\n`;
+        });
+      }
+
+      // User message with full context
+      const userMessage = [
+        `I'm stuck on this LeetCode problem: ${problemInfo.title} (${problemInfo.difficulty})`,
+        "",
+        `Problem: ${problemInfo.problemStatement || "Not available"}`,
+        `Constraints: ${(problemInfo.constraints || []).join("; ")}`,
+        `Examples: ${
+          problemInfo.examples
+            ? problemInfo.examples.join("; ")
+            : "Not available"
+        }`,
+        `Language: ${lang}`,
+        "",
+        "Here's what I have so far:",
+        userCode || "(I haven't written any code yet)",
+        hintsContext,
+        "",
+        "I need help figuring out how to approach this. Can you guide me step by step?",
+      ].join("\n\n");
+
+      const response = await this.sendToLLM(systemPrompt, userMessage);
+      this.showLoading(false);
+
+      if (response && response.trim().length > 0) {
+        this.addMessage(response, "bot");
+      } else {
+        this.addMessage(
+          "❌ Sorry, I couldn't process your request. Please try again.",
+          "bot",
+          "error"
+        );
+      }
+    } catch (error) {
+      this.showLoading(false);
+      console.error("Error in Stuck Mode:", error);
+      this.addMessage(
+        `❌ Error starting Stuck Mode: ${error.message}`,
         "bot",
         "error"
       );

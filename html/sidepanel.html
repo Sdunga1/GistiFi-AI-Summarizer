@@ -23,6 +23,20 @@
         </div>
 
         <div class="header-actions">
+          <button id="download-btn" class="icon-btn" title="Download Chat">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7,10 12,15 17,10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </button>
           <button id="settings-btn" class="icon-btn" title="Settings">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -115,6 +129,28 @@
         </button>
         <button class="quick-action-btn" data-action="analyze-code">
           🧠 Analyze Code
+        </button>
+        <button
+          class="quick-action-btn"
+          data-action="stuck-mode"
+          style="display: none"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+          </svg>
+          Stuck Mode
         </button>
         <button
           class="quick-action-btn"
