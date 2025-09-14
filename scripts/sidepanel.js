@@ -28,6 +28,16 @@ class GistiFiChat {
 
     // Set initial button state based on current mode
     this.toggleActionButtons(this.isLeetCodeModeActive());
+
+    // Scroll to bottom immediately without animation when opening
+    this.scrollToBottomInstant();
+  }
+
+  scrollToBottomInstant() {
+    const messagesContainer = document.getElementById("chat-messages");
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
   }
 
   async getCurrentTab() {
@@ -410,8 +420,6 @@ class GistiFiChat {
       if (html) {
         const container = document.getElementById("chat-messages");
         container.innerHTML = html;
-        // Scroll to latest message on restore
-        container.scrollTop = container.scrollHeight;
         return true;
       }
       return false;
@@ -1269,7 +1277,6 @@ ${code}`,
     `;
 
     messagesContainer.appendChild(messageDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
     // Save to chat history
     this.saveChatHistory();
@@ -2125,7 +2132,6 @@ ${code}`,
         `;
         this.thinkingMessageEl = wrapper;
         messagesContainer.appendChild(wrapper);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
     } else {
       if (this.thinkingMessageEl && this.thinkingMessageEl.parentNode) {
@@ -2193,8 +2199,6 @@ ${code}`,
         history.forEach((msg) => {
           this.addMessageFromHistory(msg.content, msg.sender, msg.time);
         });
-        // Scroll to latest message after restore
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
     } catch (error) {
       console.error("Error loading chat history:", error);

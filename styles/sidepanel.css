@@ -32,6 +32,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 480px;
 }
 
 /* LeetCode theme overrides */
@@ -284,7 +285,6 @@ body.leetcode-theme {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  scroll-behavior: smooth;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -423,7 +423,7 @@ body.leetcode-theme {
   background: var(--secondary-bg);
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .quick-action-btn {
