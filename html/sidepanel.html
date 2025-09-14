@@ -17,12 +17,32 @@
           <span class="status-indicator">● Online</span>
         </div>
 
-        <!-- Dynamic Mode Indicator -->
-        <div class="mode-indicator" id="mode-indicator">
-          <span class="mode-text">Regular Mode</span>
-        </div>
+        <!-- Dynamic Mode Indicator - REMOVED (replaced with mode-status below LeetCode button) -->
 
         <div class="header-actions">
+          <div class="leetcode-mode-container">
+            <button
+              id="leetcode-mode-btn"
+              class="quick-action-btn leetcode-mode-btn"
+              data-action="leetcode-mode"
+            >
+              <img
+                src="https://img.icons8.com/?size=100&id=9L16NypUzu38&format=png&color=000000"
+                alt="LeetCode"
+                class="leetcode-icon"
+                width="16"
+                height="16"
+              />
+              LeetCode Mode
+            </button>
+            <div class="mode-status" id="mode-status">
+              <span class="status-dot"></span>
+              <span class="status-text">Regular Mode</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-actions-right">
           <button id="download-btn" class="icon-btn" title="Download Chat">
             <svg
               width="20"
@@ -103,21 +123,7 @@
 
       <!-- Quick Actions -->
       <div class="quick-actions">
-        <button
-          class="quick-action-btn leetcode-mode-btn"
-          data-action="leetcode-mode"
-          id="leetcode-mode-btn"
-          style="display: none"
-        >
-          <img
-            src="https://img.icons8.com/?size=100&id=9L16NypUzu38&format=png&color=000000"
-            alt="LeetCode"
-            class="leetcode-icon"
-            width="16"
-            height="16"
-          />
-          LeetCode Mode
-        </button>
+        <!-- LeetCode Mode button moved to header -->
 
         <!-- Regular Mode Buttons -->
         <button
@@ -269,14 +275,7 @@
           📚 Resources
         </button>
 
-        <!-- Debug button for testing problem extraction -->
-        <button
-          class="quick-action-btn debug-btn"
-          data-action="debug-extract"
-          style="display: none"
-        >
-          🔍 Debug Extract
-        </button>
+        <!-- Debug button for testing problem extraction - REMOVED -->
 
         <!-- Debug button for testing YouTube service -->
         <button

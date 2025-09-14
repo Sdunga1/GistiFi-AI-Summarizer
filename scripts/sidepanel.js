@@ -72,14 +72,13 @@ class GistiFiChat {
   toggleLeetCodeButton(show) {
     const leetcodeBtn = document.getElementById("leetcode-mode-btn");
     if (leetcodeBtn) {
-      leetcodeBtn.style.display = show ? "inline-flex" : "none";
+      leetcodeBtn.style.display = show ? "flex" : "none";
     }
   }
 
   toggleActionButtons(isLeetCodeMode) {
     const resourcesBtn = document.querySelector('[data-action="resources"]');
     const stuckModeBtn = document.querySelector('[data-action="stuck-mode"]');
-    const debugBtn = document.querySelector('[data-action="debug-extract"]');
     const summarizeBtn = document.querySelector('[data-action="summarize"]');
     const askQuestionBtn = document.querySelector(
       '[data-action="ask-question"]'
@@ -89,7 +88,6 @@ class GistiFiChat {
       // Show LeetCode-specific buttons
       if (resourcesBtn) resourcesBtn.style.display = "inline-flex";
       if (stuckModeBtn) stuckModeBtn.style.display = "inline-flex";
-      if (debugBtn) debugBtn.style.display = "inline-flex";
       // Hide regular mode buttons
       if (summarizeBtn) summarizeBtn.style.display = "none";
       if (askQuestionBtn) askQuestionBtn.style.display = "none";
@@ -100,7 +98,6 @@ class GistiFiChat {
       // Hide LeetCode-specific buttons
       if (resourcesBtn) resourcesBtn.style.display = "none";
       if (stuckModeBtn) stuckModeBtn.style.display = "none";
-      if (debugBtn) debugBtn.style.display = "none";
     }
 
     // Toggle expandable Guide Me interface
@@ -151,22 +148,20 @@ class GistiFiChat {
   }
 
   updateModeIndicator(isLeetCodeMode, currentTopic = null) {
-    const modeIndicator = document.getElementById("mode-indicator");
-    if (modeIndicator) {
-      const modeText = modeIndicator.querySelector(".mode-text");
-      if (modeText) {
-        if (isLeetCodeMode) {
-          modeIndicator.classList.add("leetcode-mode");
-          if (currentTopic) {
-            // Show current Guide Me topic
-            modeText.textContent = currentTopic;
-          } else {
-            modeText.textContent = "LeetCode Mode";
-          }
+    const modeStatus = document.getElementById("mode-status");
+
+    // Update the mode status indicator
+    if (modeStatus) {
+      if (isLeetCodeMode) {
+        if (currentTopic) {
+          modeStatus.innerHTML = `<span class="status-dot"></span><span class="status-text">${currentTopic}</span>`;
         } else {
-          modeIndicator.classList.remove("leetcode-mode");
-          modeText.textContent = "Regular Mode";
+          modeStatus.innerHTML =
+            '<span class="status-dot"></span><span class="status-text">LeetCode Mode</span>';
         }
+      } else {
+        modeStatus.innerHTML =
+          '<span class="status-dot"></span><span class="status-text">Regular Mode</span>';
       }
     }
   }
@@ -324,6 +319,7 @@ class GistiFiChat {
 
   showLeetCodeModeIndicator() {
     const leetcodeBtn = document.getElementById("leetcode-mode-btn");
+    const modeStatus = document.getElementById("mode-status");
 
     if (leetcodeBtn) {
       leetcodeBtn.classList.add("active");
@@ -333,6 +329,11 @@ class GistiFiChat {
 
       // Update button state for LeetCode mode
       this.toggleActionButtons(true);
+    }
+
+    if (modeStatus) {
+      modeStatus.innerHTML =
+        '<span class="status-dot"></span><span class="status-text">LeetCode Mode</span>';
     }
   }
 
@@ -609,9 +610,9 @@ class GistiFiChat {
       case "resources":
         this.showResources();
         break;
-      case "debug-extract":
-        await this.debugProblemExtraction();
-        break;
+      // case "debug-extract": // REMOVED - Debug Extract button removed
+      //   await this.debugProblemExtraction();
+      //   break;
       case "leetcode-mode":
         if (this.isLeetCodeModeActive()) {
           await this.deactivateLeetCodeMode();
