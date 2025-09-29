@@ -89,7 +89,7 @@ async function getSummaryFromGemini(rawText, type, apiKey) {
   const prompt = promptMap[type] || prompt["brief"];
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -100,14 +100,27 @@ async function getSummaryFromGemini(rawText, type, apiKey) {
     }
   );
 
-  if (!res) {
-    const { error } = await res.json();
-    throw new Error(error?.message || "Request failed. Try after some time!");
+  if (!res.ok) {
+    const status = res.status;
+    const rawErr = await res.text().catch(() => "");
+    let message = `Request failed (HTTP ${status}).`;
+    try {
+      const parsed = rawErr ? JSON.parse(rawErr) : null;
+      message = parsed?.error?.message || message;
+    } catch (_) {}
+    throw new Error(message);
   }
 
-  const data = await res.json();
+  const raw = await res.text().catch(() => "");
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    throw new Error("Empty or invalid JSON response from API");
+  }
   const result =
-    data.candidates?.[0]?.content?.parts?.[0]?.text ??
+    data.candidates?.[0]?.content?.parts?.[0]?.text ||
+    data.output_text ||
     "No Response... :( Please make sure you provided correct Gemini API Key. Click '🔑 symbol' to add the correct key";
 
   if (result.startsWith("No Response")) {

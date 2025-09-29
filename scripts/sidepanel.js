@@ -1220,7 +1220,7 @@ ${code}`,
     const prompt = promptMap[type] || promptMap.brief;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1232,13 +1232,27 @@ ${code}`,
     );
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || "API request failed");
+      const status = response.status;
+      const rawErr = await response.text().catch(() => "");
+      let msg = `API request failed (HTTP ${status})`;
+      try {
+        const parsed = rawErr ? JSON.parse(rawErr) : null;
+        msg = parsed?.error?.message || msg;
+      } catch (_) {}
+      throw new Error(msg);
     }
 
-    const data = await response.json();
+    const raw = await response.text().catch(() => "");
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      throw new Error("Empty or invalid JSON response from API");
+    }
     return (
-      data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated"
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      data.output_text ||
+      "No response generated"
     );
   }
 
@@ -1731,7 +1745,7 @@ ${code}`,
 
       // Send to Gemini
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1747,13 +1761,26 @@ ${code}`,
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "API request failed");
+        const status = response.status;
+        const rawErr = await response.text().catch(() => "");
+        let msg = `API request failed (HTTP ${status})`;
+        try {
+          const parsed = rawErr ? JSON.parse(rawErr) : null;
+          msg = parsed?.error?.message || msg;
+        } catch (_) {}
+        throw new Error(msg);
       }
 
-      const data = await response.json();
+      const raw = await response.text().catch(() => "");
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch (_) {
+        throw new Error("Empty or invalid JSON response from API");
+      }
       const responseText =
         data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        data.output_text ||
         "No response generated";
 
       // Clean up the response
