@@ -6,10 +6,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load saved API keys
   chrome.storage.sync.get(
-    ["geminiApiKey", "youtubeApiKey"],
-    ({ geminiApiKey, youtubeApiKey }) => {
+    ["geminiApiKey", "youtubeApiKey", "geminiModel", "freeTierHint"],
+    ({ geminiApiKey, youtubeApiKey, geminiModel, freeTierHint }) => {
       if (geminiApiKey) geminiInput.value = geminiApiKey;
       if (youtubeApiKey) youtubeInput.value = youtubeApiKey;
+      const modelSelect = document.getElementById("model-select");
+      const freeTierCb = document.getElementById("free-tier-hint");
+      if (modelSelect && geminiModel) modelSelect.value = geminiModel;
+      if (freeTierCb) freeTierCb.checked = !!freeTierHint;
     }
   );
 
@@ -36,6 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("save-button").addEventListener("click", () => {
     const geminiKey = geminiInput.value.trim();
     const youtubeKey = youtubeInput.value.trim();
+    const modelSelect = document.getElementById("model-select");
+    const freeTierCb = document.getElementById("free-tier-hint");
 
     if (!geminiKey) {
       errorMsg.style.display = "block";
@@ -48,6 +54,8 @@ document.addEventListener("DOMContentLoaded", () => {
       {
         geminiApiKey: geminiKey,
         youtubeApiKey: youtubeKey,
+        geminiModel: modelSelect ? modelSelect.value : "models/gemini-2.0-flash",
+        freeTierHint: freeTierCb ? freeTierCb.checked : false,
       },
       () => {
         chrome.action.setPopup({ popup: "../html/reloadPrompt.html" }, () => {

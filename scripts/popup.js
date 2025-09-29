@@ -88,8 +88,10 @@ async function getSummaryFromGemini(rawText, type, apiKey) {
 
   const prompt = promptMap[type] || prompt["brief"];
 
+  const modelConfig = await chrome.storage.sync.get(["geminiModel"]);
+  const model = modelConfig.geminiModel || "models/gemini-2.0-flash";
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model.replace("models/", ""))}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -1,5 +1,10 @@
 /* Floating Action Button Styles */
 .gistifi-fab {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  line-height: 0;
+  font-size: 0; /* Prevent site-wide styles injecting text or counters */
   position: fixed;
   bottom: 20px;
   right: 20px;
@@ -27,6 +32,12 @@
   backdrop-filter: blur(10px);
 }
 
+/* Prevent sites from injecting pseudo-element content */
+.gistifi-fab::before,
+.gistifi-fab::after {
+  content: none !important;
+}
+
 .gistifi-fab:hover {
   transform: scale(1.1) translateY(-3px);
   border-color: #f27a7a;
@@ -41,6 +52,7 @@
 /* Removed pulse animation as requested */
 
 .gistifi-fab-icon {
+  font-size: 14px; /* restore normal font-size for inner content if needed */
   width: 32px;
   height: 32px;
   border-radius: 6px;
@@ -138,7 +150,7 @@
 /* Make sure it doesn't interfere with page content */
 .gistifi-fab-container {
   position: relative;
-  z-index: 10000;
+  z-index: 2147483647; /* ensure on top of most site elements */
   opacity: 1;
   transition: opacity 0.3s ease;
 }

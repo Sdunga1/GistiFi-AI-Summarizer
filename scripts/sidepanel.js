@@ -546,10 +546,11 @@ class GistiFiChat {
     const statusText = document.getElementById("api-status-text");
 
     try {
-      const result = await chrome.storage.sync.get(["geminiApiKey"]);
+      const result = await chrome.storage.sync.get(["geminiApiKey", "geminiModel", "freeTierHint"]);
       if (result.geminiApiKey) {
         statusDot.className = "status-dot";
-        statusText.textContent = "Ready";
+        const model = result.geminiModel || "models/gemini-2.0-flash";
+        statusText.textContent = `Ready · ${model.replace("models/", "")}${result.freeTierHint ? " · Free hint" : ""}`;
       } else {
         statusDot.className = "status-dot error";
         statusText.textContent = "API Key Required";
@@ -640,6 +641,9 @@ class GistiFiChat {
     this.isProcessing = true;
 
     try {
+      // Estimate tokens (very rough): chars/4 as a heuristic
+      const estimatedTokens = Math.ceil(message.length / 4);
+      this.incrementDailyUsage(estimatedTokens).catch(() => {});
       console.log("Processing message:", message);
       console.log(
         "Guide Me session active:",
@@ -724,6 +728,32 @@ class GistiFiChat {
       this.showLoading(false);
       this.isProcessing = false;
     }
+  }
+
+  async incrementDailyUsage(estimatedTokens) {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const key = `usage_${today}`;
+      const data = await chrome.storage.local.get([key]);
+      const current = data[key] || { tokens: 0, requests: 0 };
+      current.tokens += estimatedTokens;
+      current.requests += 1;
+      await chrome.storage.local.set({ [key]: current });
+      this.updateUsageBar(current);
+    } catch (_) {}
+  }
+
+  updateUsageBar(current) {
+    try {
+      const statusText = document.getElementById("api-status-text");
+      if (!statusText) return;
+      chrome.storage.sync.get(["geminiModel", "freeTierHint"]).then((cfg) => {
+        const model = (cfg.geminiModel || "models/gemini-2.0-flash").replace("models/", "");
+        const freeHint = cfg.freeTierHint ? " · Free hint" : "";
+        // Show requests count; token estimate is rough and local only
+        statusText.textContent = `Ready · ${model}${freeHint} · ${current.requests} req`;
+      });
+    } catch (_) {}
   }
 
   async handleGuideMeConversation(message) {
@@ -1219,8 +1249,10 @@ ${code}`,
 
     const prompt = promptMap[type] || promptMap.brief;
 
+    const { geminiModel } = await chrome.storage.sync.get(["geminiModel"]);
+    const model = geminiModel || "models/gemini-2.0-flash";
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model.replace("models/", ""))}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1744,8 +1776,10 @@ ${code}`,
       const completePrompt = `${systemPrompt}\n\nUser: ${userMessage}\n\nAssistant:`;
 
       // Send to Gemini
+      const { geminiModel } = await chrome.storage.sync.get(["geminiModel"]);
+      const model = geminiModel || "models/gemini-2.0-flash";
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model.replace("models/", ""))}:generateContent?key=${geminiApiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
