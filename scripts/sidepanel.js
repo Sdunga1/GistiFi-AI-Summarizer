@@ -2433,11 +2433,19 @@ ${code}`,
     if (!this.currentTabId) return;
 
     const messagesContainer = document.getElementById('chat-messages');
-    const messages = Array.from(messagesContainer.children).map(msg => ({
-      content: msg.querySelector('.message-bubble').innerHTML,
-      sender: msg.classList.contains('user-message') ? 'user' : 'bot',
-      time: msg.querySelector('.message-time').textContent,
-    }));
+    const messages = Array.from(messagesContainer.children)
+      .filter(msg => {
+        // Only include messages that have both message-bubble and message-time elements
+        return (
+          msg.querySelector('.message-bubble') &&
+          msg.querySelector('.message-time')
+        );
+      })
+      .map(msg => ({
+        content: msg.querySelector('.message-bubble').innerHTML,
+        sender: msg.classList.contains('user-message') ? 'user' : 'bot',
+        time: msg.querySelector('.message-time').textContent,
+      }));
 
     await chrome.storage.local.set({
       [`chat_history_${this.currentTabId}`]: messages,
@@ -3564,4 +3572,155 @@ ${code}`,
 // Initialize chat when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   new GistiFiChat();
+
+  // Initialize animated icons
+  initializeAnimatedIcons();
 });
+
+// Initialize animated icons
+function initializeAnimatedIcons() {
+  // Wait a bit for iconLoader to be available
+  setTimeout(() => {
+    if (window.iconLoader) {
+      // Replace the chart column icon in the Analyze Code button
+      if (window.ChartColumnIcon) {
+        const analyzeCodeBtn = document.getElementById('analyze-code-btn');
+        if (analyzeCodeBtn) {
+          const iconContainer = analyzeCodeBtn.querySelector(
+            '.chart-column-icon-container'
+          );
+          if (iconContainer) {
+            const chartIcon = new ChartColumnIcon({
+              width: 16,
+              height: 16,
+              strokeWidth: 2,
+              stroke: 'currentColor',
+            });
+            const iconElement = chartIcon.create();
+            iconContainer.appendChild(iconElement);
+
+            // Add button hover events
+            analyzeCodeBtn.addEventListener('mouseenter', () => {
+              if (iconElement.animateBars) iconElement.animateBars();
+            });
+            analyzeCodeBtn.addEventListener('mouseleave', () => {
+              if (iconElement.resetBars) iconElement.resetBars();
+            });
+          }
+        }
+      }
+
+      // Replace the download icon in the Download button
+      if (window.DownloadIcon) {
+        const downloadBtn = document.getElementById('download-btn');
+        if (downloadBtn) {
+          const iconContainer = downloadBtn.querySelector(
+            '.download-icon-container'
+          );
+          if (iconContainer) {
+            const downloadIcon = new DownloadIcon({
+              width: 20,
+              height: 20,
+              strokeWidth: 2,
+              stroke: 'currentColor',
+            });
+            const iconElement = downloadIcon.create();
+            iconContainer.appendChild(iconElement);
+
+            // Add button hover events
+            downloadBtn.addEventListener('mouseenter', () => {
+              if (iconElement.animateBounce) iconElement.animateBounce();
+            });
+            downloadBtn.addEventListener('mouseleave', () => {
+              if (iconElement.resetBounce) iconElement.resetBounce();
+            });
+          }
+        }
+      }
+
+      // Replace the delete icon in the Clear Chat button
+      if (window.DeleteIcon) {
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+        if (clearChatBtn) {
+          const iconContainer = clearChatBtn.querySelector(
+            '.delete-icon-container'
+          );
+          if (iconContainer) {
+            const deleteIcon = new DeleteIcon({
+              width: 20,
+              height: 20,
+              strokeWidth: 2,
+              stroke: 'currentColor',
+            });
+            const iconElement = deleteIcon.create();
+            iconContainer.appendChild(iconElement);
+
+            // Add button hover events
+            clearChatBtn.addEventListener('mouseenter', () => {
+              if (iconElement.animateDelete) iconElement.animateDelete();
+            });
+            clearChatBtn.addEventListener('mouseleave', () => {
+              if (iconElement.resetDelete) iconElement.resetDelete();
+            });
+          }
+        }
+      }
+
+      // Replace the annoyed icon in the Stuck Mode button
+      if (window.AnnoyedIcon) {
+        const stuckModeBtn = document.getElementById('stuck-mode-btn');
+        if (stuckModeBtn) {
+          const iconContainer = stuckModeBtn.querySelector(
+            '.annoyed-icon-container'
+          );
+          if (iconContainer) {
+            const annoyedIcon = new AnnoyedIcon({
+              width: 16,
+              height: 16,
+              strokeWidth: 2,
+              stroke: 'currentColor',
+            });
+            const iconElement = annoyedIcon.create();
+            iconContainer.appendChild(iconElement);
+
+            // Add button hover events
+            stuckModeBtn.addEventListener('mouseenter', () => {
+              if (iconElement.animateAnnoyed) iconElement.animateAnnoyed();
+            });
+            stuckModeBtn.addEventListener('mouseleave', () => {
+              if (iconElement.resetAnnoyed) iconElement.resetAnnoyed();
+            });
+          }
+        }
+      }
+
+      // Replace the folders icon in the Resources button
+      if (window.FoldersIcon) {
+        const resourcesBtn = document.getElementById('resources-btn');
+        if (resourcesBtn) {
+          const iconContainer = resourcesBtn.querySelector(
+            '.folders-icon-container'
+          );
+          if (iconContainer) {
+            const foldersIcon = new FoldersIcon({
+              width: 16,
+              height: 16,
+              strokeWidth: 2,
+              stroke: 'currentColor',
+            });
+            const iconElement = foldersIcon.create();
+            iconContainer.appendChild(iconElement);
+
+            // Add button hover events
+            resourcesBtn.addEventListener('mouseenter', () => {
+              if (iconElement.animateFolders) iconElement.animateFolders();
+            });
+            resourcesBtn.addEventListener('mouseleave', () => {
+              if (iconElement.resetFolders) iconElement.resetFolders();
+            });
+          }
+        }
+      }
+    }
+  }, 100);
+}

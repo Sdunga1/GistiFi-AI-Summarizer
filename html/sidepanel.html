@@ -6,6 +6,7 @@
     <title>GistiFi AI Chat</title>
     <link rel="stylesheet" href="../styles/sidepanel.css" />
     <link rel="stylesheet" href="../styles/footer.css" />
+    <link rel="stylesheet" href="../icons/animated/animated-icons.css" />
   </head>
   <body>
     <!-- Header Section -->
@@ -44,18 +45,7 @@
 
         <div class="header-actions-right">
           <button id="download-btn" class="icon-btn" title="Download Chat">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7,10 12,15 17,10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
+            <span class="download-icon-container"></span>
           </button>
           <button id="settings-btn" class="icon-btn" title="Settings">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -65,11 +55,7 @@
             </svg>
           </button>
           <button id="clear-chat-btn" class="icon-btn" title="Clear Chat">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
-              />
-            </svg>
+            <span class="delete-icon-container"></span>
           </button>
         </div>
       </div>
@@ -138,23 +124,9 @@
           class="quick-action-btn"
           data-action="stuck-mode"
           style="display: none"
+          id="stuck-mode-btn"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-            <line x1="9" y1="9" x2="9.01" y2="9"></line>
-            <line x1="15" y1="9" x2="15.01" y2="9"></line>
-          </svg>
-          &nbsp;&nbsp;Stuck Mode
+          <span class="annoyed-icon-container"></span>Stuck Mode
         </button>
         <button
           class="quick-action-btn"
@@ -265,15 +237,20 @@
             </div>
           </div>
         </div>
-        <button class="quick-action-btn" data-action="analyze-code">
-          🧠&nbsp;&nbsp;Analyze Code
+        <button
+          class="quick-action-btn"
+          data-action="analyze-code"
+          id="analyze-code-btn"
+        >
+          <span class="chart-column-icon-container"></span>Analyze Code
         </button>
         <button
           class="quick-action-btn"
           data-action="resources"
           style="display: none"
+          id="resources-btn"
         >
-          📚 Resources
+          <span class="folders-icon-container"></span>Resources
         </button>
 
         <!-- Debug button for testing problem extraction - REMOVED -->
@@ -393,6 +370,15 @@
     <script src="../scripts/guideMePrompts.js"></script>
     <script src="../scripts/guideMeSession.js"></script>
     <script src="../scripts/youtubeService.js"></script>
+
+    <!-- Load animated icons -->
+    <script src="../icons/animated/chartColumn.js"></script>
+    <script src="../icons/animated/download.js"></script>
+    <script src="../icons/animated/delete.js"></script>
+    <script src="../icons/animated/circleHelp.js"></script>
+    <script src="../icons/animated/folders.js"></script>
+    <script src="../icons/animated/annoyed.js"></script>
+    <script src="../icons/animated/iconLoader.js"></script>
 
     <!-- Load main script last -->
     <script src="../scripts/sidepanel.js"></script>

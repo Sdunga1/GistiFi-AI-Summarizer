@@ -1,0 +1,156 @@
+/**
+ * Animated Icons CSS
+ * Styles for animated icon components
+ */
+
+.chart-column-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.chart-column-icon:hover {
+  transform: scale(1.05);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.chart-column-icon svg {
+  transition: all 0.3s ease;
+}
+
+.chart-column-icon:hover svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Animation keyframes for chart bars */
+@keyframes chartBarDraw {
+  from {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes chartBarErase {
+  from {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  to {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+}
+
+/* Download Icon Styles */
+.download-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.download-icon:hover {
+  transform: scale(1.05);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Delete Icon Styles */
+.delete-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.delete-icon:hover {
+  transform: scale(1.05);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Circle Help Icon Styles */
+.circle-help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.circle-help-icon:hover {
+  transform: scale(1.05);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Folders Icon Styles */
+.folders-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.folders-icon:hover {
+  transform: scale(1.05);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Annoyed Icon Styles */
+.annoyed-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.annoyed-icon:hover {
+  transform: scale(1.05);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Ensure proper spacing in buttons */
+.quick-action-btn .chart-column-icon,
+.quick-action-btn .circle-help-icon,
+.quick-action-btn .folders-icon,
+.quick-action-btn .annoyed-icon {
+  margin-right: 4px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .chart-column-icon:hover,
+  .download-icon:hover,
+  .delete-icon:hover,
+  .circle-help-icon:hover,
+  .folders-icon:hover,
+  .annoyed-icon:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
