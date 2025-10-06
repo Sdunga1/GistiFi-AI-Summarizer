@@ -20,6 +20,7 @@ class GistiFiChat {
     this.checkApiStatus();
     this.setupCharCounter();
     this.setupCloseDetection();
+    this.setupProfileListener();
     // Always start with regular mode for new tabs - clean session
     this.getCurrentTab().then(tab => {
       if (tab && tab.url && tab.url.includes('leetcode.com')) {
@@ -1349,7 +1350,19 @@ ${code}`,
     if (sender === 'bot') {
       avatarContent = '<img src="../assets/icon.png" alt="GistiFi">';
     } else {
-      avatarContent = 'You';
+      // Check for user profile
+      const profileData = window.profileManager
+        ? window.profileManager.getProfileData()
+        : null;
+      if (
+        profileData &&
+        profileData.avatar &&
+        profileData.avatar !== '../assets/icon.png'
+      ) {
+        avatarContent = `<img src="${profileData.avatar}" alt="Profile" class="user-profile-avatar">`;
+      } else {
+        avatarContent = 'You';
+      }
     }
 
     let messageClass = 'message-bubble';
@@ -2484,7 +2497,19 @@ ${code}`,
     if (sender === 'bot') {
       avatarContent = '<img src="../assets/icon.png" alt="GistiFi">';
     } else {
-      avatarContent = 'You';
+      // Check for user profile
+      const profileData = window.profileManager
+        ? window.profileManager.getProfileData()
+        : null;
+      if (
+        profileData &&
+        profileData.avatar &&
+        profileData.avatar !== '../assets/icon.png'
+      ) {
+        avatarContent = `<img src="${profileData.avatar}" alt="Profile" class="user-profile-avatar">`;
+      } else {
+        avatarContent = 'You';
+      }
     }
 
     messageDiv.innerHTML = `
@@ -2581,6 +2606,31 @@ ${code}`,
         } catch (error) {
           console.log('Could not notify of side panel close');
         }
+      }
+    });
+  }
+
+  setupProfileListener() {
+    // Listen for profile updates to refresh user avatars in existing messages
+    document.addEventListener('profileUpdated', event => {
+      this.updateUserAvatars(event.detail);
+    });
+  }
+
+  updateUserAvatars(profileData) {
+    // Update all existing user message avatars
+    const userMessages = document.querySelectorAll(
+      '.message.user-message .message-avatar'
+    );
+    userMessages.forEach(avatarElement => {
+      if (
+        profileData &&
+        profileData.avatar &&
+        profileData.avatar !== '../assets/icon.png'
+      ) {
+        avatarElement.innerHTML = `<img src="${profileData.avatar}" alt="Profile" class="user-profile-avatar">`;
+      } else {
+        avatarElement.innerHTML = 'You';
       }
     });
   }

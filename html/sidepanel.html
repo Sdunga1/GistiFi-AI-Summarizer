@@ -6,6 +6,7 @@
     <title>GistiFi AI Chat</title>
     <link rel="stylesheet" href="../styles/sidepanel.css" />
     <link rel="stylesheet" href="../styles/footer.css" />
+    <link rel="stylesheet" href="../styles/profile.css" />
     <link rel="stylesheet" href="../icons/animated/animated-icons.css" />
   </head>
   <body>
@@ -366,10 +367,97 @@
       </div>
     </div>
 
+    <!-- Profile Settings Modal -->
+    <div id="profile-modal" class="modal hidden">
+      <div class="modal-content profile-modal">
+        <div class="modal-header">
+          <h3>Profile Settings</h3>
+          <button class="close-modal" data-modal="profile-modal">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="profile-card">
+            <div class="profile-avatar-section">
+              <div class="profile-avatar-container">
+                <img
+                  id="profile-avatar-preview"
+                  src="../assets/icon.png"
+                  alt="Profile"
+                  class="profile-avatar"
+                />
+                <div class="avatar-overlay">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                    />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </div>
+              </div>
+              <input
+                type="file"
+                id="profile-image-input"
+                accept="image/*"
+                style="display: none"
+              />
+              <button id="change-avatar-btn" class="btn-secondary">
+                Change Photo
+              </button>
+            </div>
+
+            <div class="profile-form">
+              <div class="form-group">
+                <label for="profile-name">Name</label>
+                <input
+                  type="text"
+                  id="profile-name"
+                  placeholder="Enter your name"
+                  maxlength="30"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="profile-title">Title</label>
+                <input
+                  type="text"
+                  id="profile-title"
+                  placeholder="e.g., Software Developer"
+                  maxlength="50"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="profile-bio">Bio</label>
+                <textarea
+                  id="profile-bio"
+                  placeholder="Tell us about yourself..."
+                  maxlength="150"
+                  rows="3"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="save-profile" class="btn-primary">Save Profile</button>
+          <button class="close-modal" data-modal="profile-modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Load modules first -->
     <script src="../scripts/guideMePrompts.js"></script>
     <script src="../scripts/guideMeSession.js"></script>
     <script src="../scripts/youtubeService.js"></script>
+    <script src="../scripts/profileManager.js"></script>
 
     <!-- Load animated icons -->
     <script src="../icons/animated/chartColumn.js"></script>

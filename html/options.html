@@ -5,6 +5,7 @@
     <title>GistiFi AI Summary Settings</title>
     <link rel="stylesheet" href="../styles/options.css" />
     <link rel="stylesheet" href="../styles/footer.css" />
+    <link rel="stylesheet" href="../styles/profile.css" />
   </head>
   <body>
     <div class="content-wrapper">
@@ -18,6 +19,18 @@
           AI Summary Settings
         </h1>
 
+        <!-- User Profile Card -->
+        <div class="user-profile-card">
+          <div class="user-profile-info">
+            <img id="header-profile-avatar" src="../assets/icon.png" alt="Profile" class="header-profile-avatar" />
+            <div class="user-profile-details">
+              <span id="header-profile-name" class="header-profile-name">User</span>
+              <span id="header-profile-title" class="header-profile-title">Set your profile</span>
+            </div>
+          </div>
+          <button id="edit-profile-btn" class="edit-profile-btn">Edit</button>
+        </div>
+
         <div class="form-group">
           <label for="api-key">Gemini API Key:</label>
           <div class="input-with-toggle">
@@ -27,7 +40,10 @@
               placeholder="Enter your Gemini API key"
             />
             <button type="button" class="toggle-password" id="toggle-gemini">
-              <span class="eye-icon">👁️</span>
+              <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
             </button>
           </div>
           <p>
@@ -47,7 +63,10 @@
               placeholder="Enter your YouTube API key (optional)"
             />
             <button type="button" class="toggle-password" id="toggle-youtube">
-              <span class="eye-icon">👁️</span>
+              <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
             </button>
           </div>
           <p>
@@ -102,6 +121,93 @@
     <a href="https://forms.gle/gSr3BY6ofnrQhpFr9" target="_blank" class="linkedin-link" style="color : #3399ff"> [Feedback] </a>
     </footer>
 
+    <!-- Profile Settings Modal -->
+    <div id="profile-modal" class="modal hidden">
+      <div class="modal-content profile-modal">
+        <div class="modal-header">
+          <h3>Profile Settings</h3>
+          <button class="close-modal" data-modal="profile-modal">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="profile-card">
+            <div class="profile-avatar-section">
+              <div class="profile-avatar-container">
+                <img
+                  id="profile-avatar-preview"
+                  src="../assets/icon.png"
+                  alt="Profile"
+                  class="profile-avatar"
+                />
+                <div class="avatar-overlay">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                    />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </div>
+              </div>
+              <input
+                type="file"
+                id="profile-image-input"
+                accept="image/*"
+                style="display: none"
+              />
+              <button id="change-avatar-btn" class="btn-secondary">
+                Change Photo
+              </button>
+            </div>
+
+            <div class="profile-form">
+              <div class="form-group">
+                <label for="profile-name">Name</label>
+                <input
+                  type="text"
+                  id="profile-name"
+                  placeholder="Enter your name"
+                  maxlength="30"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="profile-title">Title</label>
+                <input
+                  type="text"
+                  id="profile-title"
+                  placeholder="e.g., Software Developer"
+                  maxlength="50"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="profile-bio">Bio</label>
+                <textarea
+                  id="profile-bio"
+                  placeholder="Tell us about yourself..."
+                  maxlength="150"
+                  rows="3"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="save-profile" class="btn-primary">Save Profile</button>
+          <button class="close-modal" data-modal="profile-modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../scripts/profileManager.js"></script>
     <script src="../scripts/options.js"></script>
   </body>
 </html>
