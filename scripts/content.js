@@ -69,6 +69,37 @@ async function createFloatingButton() {
   const fab = document.createElement('button');
   fab.id = 'gistifi-fab';
   fab.className = 'gistifi-fab';
+  fab.draggable = true;
+
+  // Load saved position BEFORE adding to DOM to prevent visual jump
+  const savedPosition = localStorage.getItem('gistifi-fab-position');
+  if (savedPosition) {
+    try {
+      const { x, y } = JSON.parse(savedPosition);
+      console.log('Loading saved position:', { x, y });
+
+      // Validate position is within reasonable bounds
+      const buttonSize = 51; // Updated button size (20% smaller)
+      const maxX = Math.max(0, window.innerWidth - buttonSize);
+      const maxY = Math.max(0, window.innerHeight - buttonSize);
+
+      const validX = Math.max(0, Math.min(x, maxX));
+      const validY = Math.max(0, Math.min(y, maxY));
+
+      console.log('Applied position:', { validX, validY });
+
+      // Add custom positioned class and apply position
+      fab.classList.add('custom-positioned');
+      fab.style.left = validX + 'px';
+      fab.style.top = validY + 'px';
+      fab.style.right = 'auto';
+      fab.style.bottom = 'auto';
+    } catch (error) {
+      console.log('Error parsing saved position:', error);
+    }
+  } else {
+    console.log('No saved position found, using default position');
+  }
 
   try {
     fab.innerHTML = `
@@ -85,6 +116,135 @@ async function createFloatingButton() {
     return;
   }
 
+  // Drag functionality
+  let isDragging = false;
+  let justFinishedDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+  let startPosition = { x: 0, y: 0 };
+
+  // Function to update tooltip position based on FAB position
+  function updateTooltipPosition() {
+    const fabRect = fab.getBoundingClientRect();
+    const viewportCenter = window.innerWidth / 2;
+
+    if (fabRect.left < viewportCenter) {
+      // Button is on the left half, show tooltip on the right
+      fab.classList.add('tooltip-right');
+      fab.classList.remove('tooltip-left');
+    } else {
+      // Button is on the right half, show tooltip on the left
+      fab.classList.add('tooltip-left');
+      fab.classList.remove('tooltip-right');
+    }
+  }
+
+  // Mouse down - start drag
+  fab.addEventListener('mousedown', e => {
+    if (e.button !== 0) return; // Only left mouse button
+
+    isDragging = true;
+    fab.classList.add('dragging');
+
+    const rect = fab.getBoundingClientRect();
+    dragOffset.x = e.clientX - rect.left;
+    dragOffset.y = e.clientY - rect.top;
+
+    startPosition.x = e.clientX;
+    startPosition.y = e.clientY;
+
+    e.preventDefault();
+  });
+
+  // Mouse move - drag
+  document.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+
+    const newX = e.clientX - dragOffset.x;
+    const newY = e.clientY - dragOffset.y;
+
+    // Keep button within viewport bounds
+    const maxX = window.innerWidth - fab.offsetWidth;
+    const maxY = window.innerHeight - fab.offsetHeight;
+
+    const constrainedX = Math.max(0, Math.min(newX, maxX));
+    const constrainedY = Math.max(0, Math.min(newY, maxY));
+
+    // Ensure custom positioned class is applied during drag
+    fab.classList.add('custom-positioned');
+    fab.style.left = constrainedX + 'px';
+    fab.style.top = constrainedY + 'px';
+    fab.style.right = 'auto';
+    fab.style.bottom = 'auto';
+
+    // Update tooltip position
+    updateTooltipPosition();
+  });
+
+  // Mouse up - end drag
+  document.addEventListener('mouseup', e => {
+    if (!isDragging) return;
+
+    isDragging = false;
+    fab.classList.remove('dragging');
+
+    // Check if there was actual movement (drag) vs just a click
+    const moveDistance = Math.sqrt(
+      Math.pow(e.clientX - startPosition.x, 2) +
+        Math.pow(e.clientY - startPosition.y, 2)
+    );
+
+    // Only set the flag if there was significant movement (actual drag)
+    if (moveDistance > 5) {
+      justFinishedDragging = true;
+      console.log('Drag detected, blocking clicks temporarily');
+
+      // Reset the flag after a short delay to allow normal clicks
+      setTimeout(() => {
+        justFinishedDragging = false;
+      }, 150);
+    } else {
+      console.log('No significant movement, allowing click');
+    }
+
+    // Save position to localStorage
+    const rect = fab.getBoundingClientRect();
+    const position = {
+      x: rect.left,
+      y: rect.top,
+    };
+    console.log('Saving position:', position);
+    localStorage.setItem('gistifi-fab-position', JSON.stringify(position));
+
+    // Update tooltip position after drag ends
+    updateTooltipPosition();
+  });
+
+  // Handle window resize to keep button in bounds
+  window.addEventListener('resize', () => {
+    const rect = fab.getBoundingClientRect();
+    const maxX = window.innerWidth - fab.offsetWidth;
+    const maxY = window.innerHeight - fab.offsetHeight;
+
+    const constrainedX = Math.max(0, Math.min(rect.left, maxX));
+    const constrainedY = Math.max(0, Math.min(rect.top, maxY));
+
+    if (constrainedX !== rect.left || constrainedY !== rect.top) {
+      // Ensure custom positioned class is applied
+      fab.classList.add('custom-positioned');
+      fab.style.left = constrainedX + 'px';
+      fab.style.top = constrainedY + 'px';
+      fab.style.right = 'auto';
+      fab.style.bottom = 'auto';
+
+      // Update saved position
+      const position = { x: constrainedX, y: constrainedY };
+      localStorage.setItem('gistifi-fab-position', JSON.stringify(position));
+
+      // Update tooltip position after resize
+      updateTooltipPosition();
+    }
+  });
+
   // Click handler
   async function handleButtonClick(e) {
     if (!isExtensionContextValid()) {
@@ -99,42 +259,56 @@ async function createFloatingButton() {
       fab.style.transform = '';
     }, 150);
 
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'TOGGLE_SIDE_PANEL',
-      });
+    // Hide button immediately to prevent position conflicts
+    fab.style.display = 'none';
+    console.log('Button hidden before opening side panel');
 
-      if (response) {
-        if (response.success) {
-          if (response.action === 'opened') {
-            console.log('Side panel opened successfully');
-            // Only hide button if we're confident the side panel opened
-            setTimeout(() => {
-              fab.style.display = 'none';
-            }, 100); // Small delay to ensure side panel actually opens
-          } else if (response.action === 'already_open') {
-            console.log('Side panel is already open');
+    // Small delay before opening side panel for smoother transition
+    setTimeout(async () => {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: 'TOGGLE_SIDE_PANEL',
+        });
+
+        if (response) {
+          if (response.success) {
+            if (response.action === 'opened') {
+              console.log('Side panel opened successfully');
+            } else if (response.action === 'already_open') {
+              console.log('Side panel is already open');
+              // Show button again if side panel was already open
+              fab.style.display = 'block';
+            }
+          } else {
+            if (response.action === 'show_notification') {
+              showClickExtensionNotification();
+              console.log('Showing notification to click extension icon');
+              // Show button again if there was an error
+              fab.style.display = 'block';
+            } else {
+              console.warn(
+                'Side panel toggle response:',
+                response.message || response.error || 'Unknown response'
+              );
+              // Show button again if there was an error
+              fab.style.display = 'block';
+            }
           }
         } else {
-          if (response.action === 'show_notification') {
-            showClickExtensionNotification();
-            console.log('Showing notification to click extension icon');
-          } else {
-            console.warn(
-              'Side panel toggle response:',
-              response.message || response.error || 'Unknown response'
-            );
-          }
+          console.warn('No response received from background script');
+          // Show button again if there was no response
+          fab.style.display = 'block';
         }
-      } else {
-        console.warn('No response received from background script');
+      } catch (error) {
+        console.log('Failed to toggle side panel:', error.message);
+        if (error.message.includes('Extension context invalidated')) {
+          fab.remove();
+        } else {
+          // Show button again if there was an error
+          fab.style.display = 'block';
+        }
       }
-    } catch (error) {
-      console.log('Failed to toggle side panel:', error.message);
-      if (error.message.includes('Extension context invalidated')) {
-        fab.remove();
-      }
-    }
+    }, 100); // 100ms delay for smooth transition
   }
 
   // Function to show temporary tooltip message
@@ -155,12 +329,103 @@ async function createFloatingButton() {
     showTooltipMessage('Click the extension icon to open chat panel');
   }
 
-  // Add click handler
-  fab.addEventListener('click', handleButtonClick);
+  // Add click handler (separate from drag logic)
+  fab.addEventListener('click', e => {
+    // Only handle click if we're not dragging and haven't just finished dragging
+    if (!isDragging && !justFinishedDragging) {
+      console.log('Button clicked, opening side panel');
+      handleButtonClick(e);
+    } else {
+      console.log('Click ignored - was dragging or just finished dragging');
+    }
+  });
+
+  // Simple function to restore position from localStorage
+  function restorePosition() {
+    const savedPosition = localStorage.getItem('gistifi-fab-position');
+    if (savedPosition) {
+      try {
+        const { x, y } = JSON.parse(savedPosition);
+        const buttonSize = 51;
+        const maxX = Math.max(0, window.innerWidth - buttonSize);
+        const maxY = Math.max(0, window.innerHeight - buttonSize);
+
+        const validX = Math.max(0, Math.min(x, maxX));
+        const validY = Math.max(0, Math.min(y, maxY));
+
+        // Simple position restoration
+        fab.classList.add('custom-positioned');
+        fab.style.left = validX + 'px';
+        fab.style.top = validY + 'px';
+        fab.style.right = 'auto';
+        fab.style.bottom = 'auto';
+
+        // Update tooltip position after restoring
+        updateTooltipPosition();
+
+        console.log('Position restored:', { validX, validY });
+      } catch (error) {
+        console.log('Error restoring position:', error);
+      }
+    }
+  }
+
+  // Simple approach: just restore position when side panel state changes
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'SIDE_PANEL_STATE_CHANGED') {
+      setTimeout(restorePosition, 100);
+    }
+  });
 
   // Append to body
   fabContainer.appendChild(fab);
   document.body.appendChild(fabContainer);
+
+  // Simple position restoration
+  if (savedPosition) {
+    setTimeout(restorePosition, 50);
+  } else {
+    // Update tooltip position for default position
+    setTimeout(updateTooltipPosition, 50);
+  }
+
+  // Ensure saved position is applied after DOM insertion
+  if (savedPosition) {
+    // Small delay to ensure CSS has been applied
+    setTimeout(() => {
+      try {
+        const { x, y } = JSON.parse(savedPosition);
+        // Validate position is within current viewport bounds
+        const buttonSize = 51; // Updated button size (20% smaller)
+        const maxX = Math.max(0, window.innerWidth - buttonSize);
+        const maxY = Math.max(0, window.innerHeight - buttonSize);
+
+        const validX = Math.max(0, Math.min(x, maxX));
+        const validY = Math.max(0, Math.min(y, maxY));
+
+        // Apply custom positioned class and position
+        fab.classList.add('custom-positioned');
+        fab.style.left = validX + 'px';
+        fab.style.top = validY + 'px';
+        fab.style.right = 'auto';
+        fab.style.bottom = 'auto';
+
+        // Update localStorage with validated position if it was adjusted
+        if (validX !== x || validY !== y) {
+          const position = { x: validX, y: validY };
+          localStorage.setItem(
+            'gistifi-fab-position',
+            JSON.stringify(position)
+          );
+        }
+      } catch (error) {
+        console.log(
+          'Error applying saved position after DOM insertion:',
+          error
+        );
+      }
+    }, 10);
+  }
 }
 
 // Initialize floating button when page loads
