@@ -24,7 +24,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     sans-serif;
   background: var(--primary-bg);
   color: var(--text-primary);
@@ -183,7 +183,7 @@ body.leetcode-theme {
 }
 
 .header-actions .leetcode-mode-btn::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: -100%;
@@ -392,7 +392,7 @@ body.leetcode-theme {
   background: var(--input-bg);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: "Monaco", "Menlo", monospace;
+  font-family: 'Monaco', 'Menlo', monospace;
   font-size: 13px;
 }
 
@@ -606,7 +606,7 @@ body.leetcode-theme {
 }
 
 #leetcode-welcome .message-bubble::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
@@ -707,6 +707,11 @@ body.leetcode-theme {
   display: flex;
   gap: 4px;
   align-items: flex-end;
+}
+
+/* Hide the microphone/attach button in LeetCode mode */
+.leetcode-theme #attach-btn {
+  display: none !important;
 }
 
 .send-btn {
@@ -942,7 +947,7 @@ body.leetcode-theme {
 .message-bubble.code-message {
   background: var(--input-bg);
   border-color: var(--accent-color);
-  font-family: "Monaco", "Menlo", monospace;
+  font-family: 'Monaco', 'Menlo', monospace;
   font-size: 13px;
 }
 
@@ -1099,7 +1104,7 @@ body.leetcode-theme {
 
 /* Arrow pointing down to Guide Me button */
 .guide-me-options::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 100%;
   left: 50%;
@@ -1229,7 +1234,7 @@ body.leetcode-theme {
 }
 
 .resource-link::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
