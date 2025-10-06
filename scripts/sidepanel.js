@@ -297,7 +297,7 @@ class GistiFiChat {
       // Update button state
       leetcodeBtn.classList.add('active');
       leetcodeBtn.innerHTML =
-        '<img src="https://img.icons8.com/?size=100&id=9L16NypUzu38&format=png&color=000000" alt="LeetCode" class="leetcode-icon" width="16" height="16"> ✅ LeetCode Mode';
+        '<img src="https://img.icons8.com/?size=100&id=9L16NypUzu38&format=png&color=000000" alt="LeetCode" class="leetcode-icon" width="16" height="16"> <strong>↵</strong> Regular Mode';
 
       // Store mode state
       localStorage.setItem('gistifi-leetcode-mode', 'true');
@@ -367,7 +367,7 @@ class GistiFiChat {
     if (leetcodeBtn) {
       leetcodeBtn.classList.add('active');
       leetcodeBtn.innerHTML =
-        '<img src="https://img.icons8.com/?size=100&id=9L16NypUzu38&format=png&color=000000" alt="LeetCode" class="leetcode-icon" width="16" height="16"> ✅ LeetCode Mode';
+        '<img src="https://img.icons8.com/?size=100&id=9L16NypUzu38&format=png&color=000000" alt="LeetCode" class="leetcode-icon" width="16" height="16"> <strong>↵</strong> Regular Mode';
       document.body.classList.add('leetcode-theme');
 
       // Update button state for LeetCode mode
@@ -2156,7 +2156,19 @@ ${code}`,
     return html;
   }
 
-  clearChat() {
+  async clearChat() {
+    // Check if user has disabled confirmation
+    const { skipClearConfirmation } = await chrome.storage.sync.get([
+      'skipClearConfirmation',
+    ]);
+
+    if (!skipClearConfirmation) {
+      const confirmed = await this.showClearConfirmation();
+      if (!confirmed) {
+        return; // User cancelled
+      }
+    }
+
     const messagesContainer = document.getElementById('chat-messages');
 
     // Store welcome messages before clearing
@@ -2181,6 +2193,149 @@ ${code}`,
     if (this.currentTabId) {
       chrome.storage.local.remove(`chat_history_${this.currentTabId}`);
     }
+  }
+
+  showClearConfirmation() {
+    return new Promise(resolve => {
+      // Create minimal confirmation banner
+      const confirmationBanner = document.createElement('div');
+      confirmationBanner.className = 'clear-confirmation-banner';
+      confirmationBanner.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #1e1e3f 0%, #2a2a4a 100%);
+        border: 1px solid #4a90e2;
+        border-radius: 16px;
+        padding: 18px;
+        z-index: 1000;
+        box-shadow: 0 12px 32px rgba(74, 144, 226, 0.15), 0 4px 16px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(12px);
+        animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      `;
+
+      confirmationBanner.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="
+            width: 36px; 
+            height: 36px; 
+            background: linear-gradient(135deg, #ff6b7a, #ff8a95); 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(255, 107, 122, 0.3);
+          ">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </div>
+          
+          <div style="flex: 1;">
+            <div style="color: #ffffff; font-weight: 600; font-size: 15px; margin-bottom: 2px; letter-spacing: 0.3px;">
+              Clear chat history?
+            </div>
+            <div style="color: #b0b0b0; font-size: 12px; opacity: 0.9;">
+              This action cannot be undone
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <label style="display: flex; align-items: center; color: #d0d0d0; font-size: 11px; cursor: pointer; white-space: nowrap; font-weight: 500;">
+              <input type="checkbox" id="dont-ask-again" style="margin-right: 6px; accent-color: #4a90e2; transform: scale(0.85);">
+              Don't ask again
+            </label>
+            
+            <button id="cancel-btn" style="
+              background: rgba(255, 255, 255, 0.1);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              color: #e0e0e0;
+              padding: 8px 16px;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 12px;
+              font-weight: 600;
+              transition: all 0.3s ease;
+              letter-spacing: 0.3px;
+            ">Cancel</button>
+            
+            <button id="confirm-btn" style="
+              background: linear-gradient(135deg, #ff6b7a, #ff8a95);
+              border: none;
+              color: white;
+              padding: 8px 16px;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 12px;
+              font-weight: 600;
+              transition: all 0.3s ease;
+              letter-spacing: 0.3px;
+              box-shadow: 0 4px 12px rgba(255, 107, 122, 0.3);
+            ">Clear</button>
+          </div>
+        </div>
+      `;
+
+      // Add minimal styles
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        #cancel-btn:hover {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.3);
+          transform: translateY(-1px);
+        }
+        #confirm-btn:hover {
+          background: linear-gradient(135deg, #ff5252, #ff6b7a);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(255, 107, 122, 0.4);
+        }
+      `;
+
+      document.head.appendChild(style);
+      document.body.appendChild(confirmationBanner);
+
+      // Handle events
+      const cancelBtn = confirmationBanner.querySelector('#cancel-btn');
+      const confirmBtn = confirmationBanner.querySelector('#confirm-btn');
+      const dontAskAgain = confirmationBanner.querySelector('#dont-ask-again');
+
+      const cleanup = () => {
+        confirmationBanner.style.animation = 'slideDown 0.3s ease-out reverse';
+        setTimeout(() => {
+          document.head.removeChild(style);
+          document.body.removeChild(confirmationBanner);
+        }, 300);
+      };
+
+      cancelBtn.addEventListener('click', () => {
+        cleanup();
+        resolve(false);
+      });
+
+      confirmBtn.addEventListener('click', async () => {
+        if (dontAskAgain.checked) {
+          await chrome.storage.sync.set({ skipClearConfirmation: true });
+        }
+        cleanup();
+        resolve(true);
+      });
+
+      // Handle escape key
+      const handleEscape = e => {
+        if (e.key === 'Escape') {
+          cleanup();
+          resolve(false);
+          document.removeEventListener('keydown', handleEscape);
+        }
+      };
+      document.addEventListener('keydown', handleEscape);
+    });
   }
 
   openOptionsModal() {
