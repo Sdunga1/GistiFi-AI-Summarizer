@@ -424,6 +424,8 @@ body.leetcode-theme {
   display: flex;
   gap: 12px;
   flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
 }
 
 .quick-action-btn {
