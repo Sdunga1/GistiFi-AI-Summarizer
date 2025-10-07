@@ -13,7 +13,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 100px 1rem 1rem;
+  padding: 1rem;
 }
 
 .settings-container {

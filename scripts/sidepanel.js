@@ -555,6 +555,107 @@ class GistiFiChat {
     document
       .getElementById('response-type')
       .addEventListener('change', this.handleResponseTypeChange.bind(this));
+
+    // Video player functionality
+    this.setupVideoPlayer();
+  }
+
+  setupVideoPlayer() {
+    // Intercept clicks on YouTube links
+    document.addEventListener('click', e => {
+      const link = e.target.closest('a[href*="youtube.com"]');
+      if (link && link.href.includes('youtube.com')) {
+        e.preventDefault();
+        this.openVideoPlayer(link.href);
+      }
+    });
+  }
+
+  openVideoPlayer(videoUrl) {
+    // Extract video ID from YouTube URL
+    const videoId = this.extractVideoId(videoUrl);
+    if (!videoId) return;
+
+    // Create YouTube embed URL
+    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
+
+    // Create full-screen overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+
+    const videoContainer = document.createElement('div');
+    videoContainer.style.cssText = `
+      width: 90vw;
+      height: 90vh;
+      max-width: 1200px;
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.src = embedUrl;
+    iframe.style.cssText = `
+      width: 100%;
+      height: 100%;
+      border: none;
+    `;
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute(
+      'allow',
+      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+    );
+
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '✕';
+    closeBtn.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      z-index: 10000;
+    `;
+
+    closeBtn.onclick = () => {
+      document.body.removeChild(overlay);
+    };
+
+    overlay.onclick = e => {
+      if (e.target === overlay) {
+        document.body.removeChild(overlay);
+      }
+    };
+
+    videoContainer.appendChild(iframe);
+    videoContainer.appendChild(closeBtn);
+    overlay.appendChild(videoContainer);
+    document.body.appendChild(overlay);
+  }
+
+  extractVideoId(url) {
+    const regex =
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
   }
 
   setupCharCounter() {
