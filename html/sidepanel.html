@@ -62,6 +62,79 @@
       </div>
     </header>
 
+    <!-- Compact AI News Widget (Regular Mode) -->
+    <section
+      id="ai-news-widget"
+      class="ai-news-widget"
+      aria-label="AI News"
+      style="display: none"
+    >
+      <div class="ai-news-header">
+        <div class="ai-news-title">
+          <button
+            id="ai-news-collapse"
+            class="ai-header-toggle"
+            aria-expanded="true"
+            title="Collapse/Expand"
+          >
+            ▾
+          </button>
+          <span class="ai-news-dot"></span>
+          <span>What’s new in AI</span>
+        </div>
+        <div class="ai-news-actions">
+          <button id="ai-news-refresh" class="ai-news-icon-btn" title="Refresh">
+            ↻
+          </button>
+        </div>
+      </div>
+      <div class="ai-news-tabs" role="tablist">
+        <button
+          class="ai-news-tab active"
+          role="tab"
+          aria-selected="true"
+          data-tab="papers"
+        >
+          Papers
+        </button>
+        <button
+          class="ai-news-tab"
+          role="tab"
+          aria-selected="false"
+          data-tab="trending"
+        >
+          Trending
+        </button>
+      </div>
+      <div
+        class="ai-news-filters"
+        id="ai-news-filters"
+        aria-label="Paper domains"
+      >
+        <button class="ai-chip active" data-domain="cs.LG">
+          Machine Learning
+        </button>
+        <button class="ai-chip" data-domain="cs.AI">
+          Artificial Intelligence
+        </button>
+        <button class="ai-chip" data-domain="cs.CL">NLP / Language</button>
+        <button class="ai-chip" data-domain="stat.ML">Statistical ML</button>
+      </div>
+      <div class="ai-news-content" id="ai-news-content">
+        <!-- Filled by scripts -->
+      </div>
+      <div class="ai-news-footer">
+        <span id="ai-news-updated">Updated just now</span>
+        <a
+          id="ai-news-view-all"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+          >View sources</a
+        >
+      </div>
+    </section>
+
     <!-- Chat Messages Container -->
     <main class="chat-container">
       <div id="chat-messages" class="chat-messages">
@@ -469,6 +542,7 @@
     <script src="../icons/animated/iconLoader.js"></script>
 
     <!-- Load main script last -->
+    <script src="../scripts/aiNewsWidget.js"></script>
     <script src="../scripts/sidepanel.js"></script>
   </body>
 </html>
