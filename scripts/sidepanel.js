@@ -3726,6 +3726,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize animated icons
   initializeAnimatedIcons();
+
+  // Hide Analyze Code button in Regular mode; show in LeetCode mode
+  try {
+    const analyzeBtn = document.getElementById('analyze-code-btn');
+    const modeStatus = document.getElementById('mode-status');
+    function syncAnalyzeVisibility() {
+      if (!analyzeBtn || !modeStatus) return;
+      const txt = modeStatus.querySelector('.status-text')?.textContent || '';
+      const isLeetCode = txt.toLowerCase().includes('leetcode');
+      analyzeBtn.style.display = isLeetCode ? 'inline-flex' : 'none';
+
+      // Also ensure Regular welcome message never shows an Analyze Code bullet
+      if (!isLeetCode) {
+        const regularWelcome = document.getElementById('regular-welcome');
+        if (regularWelcome) {
+          regularWelcome.querySelectorAll('li').forEach(li => {
+            if (/analy(s|z)e code/i.test(li.textContent)) {
+              li.remove();
+            }
+          });
+        }
+      }
+    }
+    syncAnalyzeVisibility();
+    if (modeStatus) {
+      const observer = new MutationObserver(syncAnalyzeVisibility);
+      observer.observe(modeStatus, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
+  } catch (e) {}
 });
 
 // Initialize animated icons

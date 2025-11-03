@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ? Array.from(filtersEl.querySelectorAll('.ai-chip'))
       : [];
     const collapseBtn = document.getElementById('ai-news-collapse');
+    const headerTitle = document.querySelector('.ai-news-title');
+    const marquee = headerTitle
+      ? headerTitle.querySelector('.ai-news-marquee')
+      : null;
 
     let currentTab = 'papers';
     let currentDomain = 'cs.LG';
@@ -248,6 +252,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const active = document.querySelector('.ai-news-tab.active');
         const kind = active ? active.getAttribute('data-tab') : 'papers';
         renderList(kind);
+        // Recompute marquee after refresh in case layout changed
+        requestAnimationFrame(computeMarquee);
       });
     }
 
@@ -260,7 +266,16 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Initial render
+    // Initial state: collapsed by default in Regular mode
+    if (widget) {
+      widget.classList.add('collapsed');
+      if (collapseBtn) {
+        collapseBtn.classList.remove('expanded');
+        collapseBtn.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    // Initial render (content will be hidden until expanded)
     setFiltersVisible(true);
     renderList('papers');
 
@@ -268,10 +283,53 @@ document.addEventListener('DOMContentLoaded', () => {
     if (collapseBtn && widget) {
       collapseBtn.addEventListener('click', () => {
         const isCollapsed = widget.classList.toggle('collapsed');
-        collapseBtn.classList.toggle('collapsed', isCollapsed);
+        // Show up chevron when expanded, down when collapsed
+        collapseBtn.classList.toggle('expanded', !isCollapsed);
         collapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+        // Recompute when expanding since width may change
+        if (!isCollapsed) requestAnimationFrame(computeMarquee);
       });
     }
+
+    // Compute marquee travel distance so that the text runs from start to just before refresh icon
+    function computeMarquee() {
+      try {
+        if (!headerTitle || !marquee) return;
+        // Available width is the header title container width
+        const available = headerTitle.clientWidth || 0;
+        const textWidth = marquee.scrollWidth || 0;
+
+        // Measure width up to the last 'I' in the phrase so the animation stops
+        // when the 'I' reaches the right edge, not the end of the whole string.
+        let pivotWidth = textWidth;
+        const titleText = marquee.textContent || '';
+        const lastI = titleText.lastIndexOf('I');
+        if (lastI !== -1) {
+          const measure = document.createElement('span');
+          measure.textContent = titleText.slice(0, lastI + 1);
+          // Copy font styling to ensure accurate measurement
+          const cs = window.getComputedStyle(marquee);
+          measure.style.position = 'absolute';
+          measure.style.visibility = 'hidden';
+          measure.style.whiteSpace = 'nowrap';
+          measure.style.font = cs.font;
+          measure.style.letterSpacing = cs.letterSpacing;
+          headerTitle.appendChild(measure);
+          pivotWidth = measure.scrollWidth || measure.offsetWidth || pivotWidth;
+          headerTitle.removeChild(measure);
+        }
+
+        const distance = Math.max(0, available - pivotWidth);
+        const pxPerSecond = 40; // speed
+        const duration = Math.max(6, Math.min(20, distance / pxPerSecond));
+        marquee.style.setProperty('--marquee-distance', distance + 'px');
+        marquee.style.setProperty('--marquee-duration', duration + 's');
+      } catch {}
+    }
+
+    // Initial compute after layout
+    setTimeout(computeMarquee, 0);
+    window.addEventListener('resize', computeMarquee);
   } catch (e) {
     // fail silently; widget is optional
   }
