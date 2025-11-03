@@ -3,26 +3,22 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     const widget = document.getElementById('ai-news-widget');
     const modeStatus = document.getElementById('mode-status');
+    function isLeetCodeTheme() {
+      return document.body.classList.contains('leetcode-theme');
+    }
+
     function syncVisibility() {
       if (!widget) return;
-      if (modeStatus && modeStatus.querySelector('.status-text')) {
-        const txt = modeStatus.querySelector('.status-text').textContent || '';
-        const isLeetCode = txt.toLowerCase().includes('leetcode');
-        widget.style.display = isLeetCode ? 'none' : 'block';
-      } else {
-        widget.style.display = 'block';
-      }
+      widget.style.display = isLeetCodeTheme() ? 'none' : 'block';
     }
     syncVisibility();
     // Observe mode changes so the widget only shows in non‑LeetCode UI
-    if (modeStatus) {
-      const observer = new MutationObserver(syncVisibility);
-      observer.observe(modeStatus, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-    }
+    // Observe body class changes (mode switches)
+    const bodyObserver = new MutationObserver(syncVisibility);
+    bodyObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
 
     const contentEl = document.getElementById('ai-news-content');
     const updatedEl = document.getElementById('ai-news-updated');

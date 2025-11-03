@@ -3730,11 +3730,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Hide Analyze Code button in Regular mode; show in LeetCode mode
   try {
     const analyzeBtn = document.getElementById('analyze-code-btn');
-    const modeStatus = document.getElementById('mode-status');
     function syncAnalyzeVisibility() {
-      if (!analyzeBtn || !modeStatus) return;
-      const txt = modeStatus.querySelector('.status-text')?.textContent || '';
-      const isLeetCode = txt.toLowerCase().includes('leetcode');
+      if (!analyzeBtn) return;
+      const isLeetCode = document.body.classList.contains('leetcode-theme');
       analyzeBtn.style.display = isLeetCode ? 'inline-flex' : 'none';
 
       // Also ensure Regular welcome message never shows an Analyze Code bullet
@@ -3750,14 +3748,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     syncAnalyzeVisibility();
-    if (modeStatus) {
-      const observer = new MutationObserver(syncAnalyzeVisibility);
-      observer.observe(modeStatus, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-    }
+    const observer = new MutationObserver(syncAnalyzeVisibility);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
   } catch (e) {}
 });
 
