@@ -1526,12 +1526,18 @@ body.leetcode-theme {
     rgba(255, 255, 255, 0.03)
   );
   border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #d1d5db;
-  padding: 4px 8px;
-  border-radius: 8px;
+  color: #9298a0;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 999px;
   cursor: pointer;
   transition: var(--transition);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ai-news-icon-btn:hover {
@@ -1651,17 +1657,18 @@ body.leetcode-theme {
 .ai-news-item-details {
   margin-top: 8px;
   padding: 8px 10px 0 10px;
-  color: #374151;
-  font-size: 12px;
-  line-height: 1.5;
+  color: rgba(209, 213, 219, 0.7); /* 70% of previous */
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .ai-news-abstract {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  color: rgba(229, 231, 235, 0.7); /* 70% of previous */
 }
 
 .ai-news-authors {
-  color: #6b7280;
+  color: rgba(156, 163, 175, 0.7); /* 70% of previous */
 }
 
 .ai-news-item a {
