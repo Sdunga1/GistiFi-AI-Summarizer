@@ -9,13 +9,18 @@ class GistiFiChat {
     };
     this.isProcessing = false;
     this.currentTabId = null;
+    this.activeTabId = null;
+    this.lastPanelTabId = null;
     this.youtubeService = null;
+    this.isClosing = false;
 
     this.init();
   }
 
   async init() {
     await this.getCurrentTab();
+    this.lastPanelTabId = this.currentTabId;
+    this.activeTabId = this.currentTabId;
     this.setupEventListeners();
     this.checkApiStatus();
     this.setupCharCounter();
@@ -45,10 +50,16 @@ class GistiFiChat {
     this.toggleActionButtons(this.isLeetCodeModeActive());
 
     // Listen for side panel opening to ensure clean session
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener(message => {
       if (message.type === 'SIDE_PANEL_OPENED') {
         // When side panel opens, check current tab and start fresh if not LeetCode
         this.getCurrentTab().then(tab => {
+          if (tab) {
+            this.currentTabId = tab.id;
+            this.activeTabId = tab.id;
+            this.lastPanelTabId = tab.id;
+          }
+
           if (tab && tab.url && !tab.url.includes('leetcode.com')) {
             // Not a LeetCode page - ensure clean regular mode session
             localStorage.removeItem('gistifi-leetcode-mode');
@@ -60,6 +71,16 @@ class GistiFiChat {
             this.toggleLeetCodeButton(false);
           }
         });
+        return;
+      }
+
+      if (message.type === 'ACTIVE_TAB_CHANGED') {
+        this.handleActiveTabChanged(message);
+        return;
+      }
+
+      if (message.type === 'FORCE_CLOSE_SIDE_PANEL') {
+        this.handleForceClose(message);
       }
     });
 
@@ -155,6 +176,117 @@ class GistiFiChat {
 
     // Update mode indicator
     this.updateModeIndicator(isLeetCodeMode);
+  }
+
+  handleActiveTabChanged({
+    tabId,
+    previousTabId,
+    url,
+    isLeetCode,
+    reason = 'activated',
+  }) {
+    if (typeof tabId === 'number') {
+      this.activeTabId = tabId;
+      if (!this.currentTabId) {
+        this.currentTabId = tabId;
+      }
+    }
+
+    if (typeof previousTabId === 'number') {
+      this.lastPanelTabId = previousTabId;
+    } else if (this.lastPanelTabId === null && typeof tabId === 'number') {
+      this.lastPanelTabId = tabId;
+    }
+
+    if (isLeetCode) {
+      this.toggleLeetCodeButton(true);
+      const isModeActive = this.isLeetCodeModeActive();
+
+      if (isModeActive) {
+        document.body.classList.add('leetcode-theme');
+        this.toggleActionButtons(true);
+      } else {
+        document.body.classList.remove('leetcode-theme');
+        this.toggleActionButtons(false);
+      }
+
+      return;
+    }
+
+    // For non-LeetCode contexts, reset to regular UI while waiting for close
+    this.resetToRegularModeUI();
+
+    if (reason === 'activated' && typeof tabId === 'number') {
+      this.lastPanelTabId = tabId;
+    }
+  }
+
+  handleForceClose({ tabId, reason = 'auto-close' }) {
+    const targetTabId =
+      typeof tabId === 'number'
+        ? tabId
+        : typeof this.lastPanelTabId === 'number'
+        ? this.lastPanelTabId
+        : this.currentTabId;
+
+    this.closePanelForTab(targetTabId, reason);
+  }
+
+  resetToRegularModeUI() {
+    localStorage.removeItem('gistifi-leetcode-mode');
+    document.body.classList.remove('leetcode-theme');
+    this.toggleLeetCodeButton(false);
+    this.toggleActionButtons(false);
+  }
+
+  closePanelForTab(targetTabId, reason = 'auto-close') {
+    if (this.isClosing) {
+      return;
+    }
+
+    this.isClosing = true;
+    const tabIdToNotify =
+      typeof targetTabId === 'number' ? targetTabId : this.currentTabId;
+
+    if (tabIdToNotify) {
+      this.currentTabId = tabIdToNotify;
+    }
+
+    const channel = this.isLeetCodeModeActive() ? 'leetcode' : 'regular';
+    this.saveCurrentChatHTML(channel).catch(error => {
+      console.warn('Failed to persist chat before closing', error);
+    });
+
+    if (tabIdToNotify) {
+      try {
+        chrome.runtime
+          .sendMessage({
+            type: 'SIDE_PANEL_STATE_CHANGED',
+            tabId: tabIdToNotify,
+            isOpen: false,
+            reason,
+          })
+          .catch(() => {});
+      } catch (error) {
+        console.log('Could not notify background about forced close');
+      }
+
+      chrome.tabs
+        .sendMessage(tabIdToNotify, {
+          type: 'SIDE_PANEL_CLOSED',
+        })
+        .catch(() => {});
+    }
+
+    this.resetToRegularModeUI();
+
+    setTimeout(() => {
+      try {
+        window.close();
+      } catch (error) {
+        console.log('Unable to close side panel window programmatically');
+      }
+    }, 0);
   }
 
   toggleWelcomeMessages(isLeetCodeMode) {
